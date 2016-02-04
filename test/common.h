@@ -21,8 +21,8 @@
 #if HAVE_ERR_H
 # include <err.h>
 #else
-# define err(rc,msg,...) do { perror(msg); exit(rc); } while (0)
-# define errx(rc,msg,...) do { puts(msg); exit(rc); } while (0)
+# define err(rc,msg, ...) do { perror(msg); exit(rc); } while (0)
+# define errx(rc,msg, ...) do { puts(msg); exit(rc); } while (0)
 #endif
 
 #define die(str)   do { \
@@ -103,6 +103,9 @@ void kevent_update(int kqfd, struct kevent *kev);
 
 #define kevent_cmp(a,b) _kevent_cmp(a,b, __FILE__, __LINE__)
 void _kevent_cmp(struct kevent *, struct kevent *, const char *, int);
+
+typedef unsigned short u_short;
+typedef unsigned int u_int;
 
 void
 kevent_add(int kqfd, struct kevent *kev, 

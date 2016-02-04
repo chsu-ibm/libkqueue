@@ -98,6 +98,8 @@ kevent_flags_dump(const struct kevent *kev)
     return ((const char *) &buf[0]);
 }
 
+typedef unsigned int u_int;
+
 const char *
 kevent_dump(const struct kevent *kev)
 {
@@ -143,7 +145,7 @@ kevent_copyin_one(struct kqueue *kq, const struct kevent *src)
             }
             memcpy(&kn->kev, src, sizeof(kn->kev));
             kn->kev.flags &= ~EV_ENABLE;
-            kn->kev.flags |= EV_ADD;//FIXME why?
+            kn->kev.flags |= EV_ADD;
 			kn->kn_kq = kq;
             assert(filt->kn_create);
             if (filt->kn_create(filt, kn) < 0) {
@@ -159,7 +161,6 @@ kevent_copyin_one(struct kqueue *kq, const struct kevent *src)
                 kn->kev.flags |= EV_DISABLE;
                 return (filt->kn_disable(filt, kn));
             }
-            //........................................
 
             return (0);
         } else {

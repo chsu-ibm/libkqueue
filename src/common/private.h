@@ -22,7 +22,7 @@
 #include <string.h>
 #include "config.h"
 #include "tree.h"
-
+#include <pthread.h>
 /* Maximum events returnable in a single kevent() call */
 #define MAX_KEVENT  512
 
@@ -46,7 +46,8 @@ struct evfilt_data;
 # include "../posix/platform.h"
 # include "../solaris/platform.h"
 #else
-# error Unknown platform
+/* # error Unknown platform */
+# include "../posix/platform.h"
 #endif
 
 #include "debug.h"
@@ -81,7 +82,7 @@ struct knote {
             nlink_t   nlink;  /* Used by vnode */
             off_t     size;   /* Used by vnode */
         } vnode;
-        timer_t       timerid;  
+        /* timer_t       timerid;   */
         struct sleepreq *sleepreq; /* Used by posix/timer.c */
 		void          *handle;      /* Used by win32 filters */
     } data;
@@ -121,10 +122,10 @@ struct filter {
 
     struct eventfd kf_efd;             /* Used by user.c */
 
-    //MOVE TO POSIX?
+    /* MOVE TO POSIX? */
     int       kf_pfd;                   /* fd to poll(2) for readiness */
     int       kf_wfd;                   /* fd to write when an event occurs */
-    //----?
+    
 
     struct evfilt_data *kf_data;	    /* filter-specific data */
     RB_HEAD(knt, knote) kf_knote;
@@ -154,15 +155,7 @@ struct kqueue {
 struct kqueue_vtable {
     int  (*kqueue_init)(struct kqueue *);
     void (*kqueue_free)(struct kqueue *);
-    // @param timespec can be given as timeout
-    // @param int the number of events to wait for
-    // @param kqueue the queue to wait on
 	int  (*kevent_wait)(struct kqueue *, int, const struct timespec *);
-    // @param kqueue the queue to look at
-    // @param int The number of events that should be ready
-    // @param kevent the structure to copy the events into
-    // @param int The number of events to copy
-    // @return the actual number of events copied
     int  (*kevent_copyout)(struct kqueue *, int, struct kevent *, int);
     int  (*filter_init)(struct kqueue *, struct filter *);
     void (*filter_free)(struct kqueue *, struct filter *);
@@ -184,7 +177,6 @@ extern const struct kqueue_vtable kqops;
  * knote internal API
  */
 struct knote * knote_lookup(struct filter *, uintptr_t);
-//DEADWOOD: struct knote * knote_get_by_data(struct filter *filt, intptr_t);
 struct knote * knote_new(void);
 #define knote_retain(kn) atomic_inc(&kn->kn_ref)
 void knote_release(struct knote *);

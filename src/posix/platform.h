@@ -25,11 +25,17 @@
 /*
  * GCC-compatible atomic operations 
  */
+#if 0
 #define atomic_inc(p)   __sync_add_and_fetch((p), 1)
 #define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #define atomic_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
 #define atomic_ptr_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
-
+#else 
+#define atomic_inc(p)   (0) 
+#define atomic_dec(p)   (0)
+#define atomic_cas(p, oval, nval) (0)
+#define atomic_ptr_cas(p, oval, nval) (0)
+#endif
 /*
  * GCC-compatible branch prediction macros
  */

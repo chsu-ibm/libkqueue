@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/select.h>
+
 #include "common.h"
 
 /* Maximum number of threads that can be created */
@@ -79,7 +81,7 @@ test_peer_close_detection(void *unused)
         die("close");
 
     if (poll(&pfd, 1, 0) > 0) {
-        if (recv(sockfd[0], buf, sizeof(buf), MSG_PEEK | MSG_DONTWAIT) != 0) 
+        if (fcntl(sockfd[0], F_SETFL, O_NONBLOCK) != 0 && recv(sockfd[0], buf, sizeof(buf), MSG_PEEK) != 0) 
             die("failed to detect peer shutdown");
     }
 #endif
@@ -155,15 +157,15 @@ test_harness(struct unit_test tests[MAX_TESTS], int iterations)
 
     ctx = calloc(1, sizeof(*ctx));
 
-    test(peer_close_detection, ctx);
+    test(peer_close_detection, ctx, "dummy");
 
-    test(kqueue, ctx);
-    test(kevent, ctx);
+    test(kqueue, ctx, "dummy");
+    test(kevent, ctx, "dummy");
 
     if ((kqfd = kqueue()) < 0)
         die("kqueue()");
 
-    test(ev_receipt, ctx);
+    test(ev_receipt, ctx, "dummy");
     /* TODO: this fails now, but would be good later 
     test(kqueue_descriptor_is_pollable);
     */

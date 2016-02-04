@@ -18,7 +18,6 @@
 # include <poll.h>
 #include "../common/private.h"
 
-//XXX-FIXME TEMP
 const struct filter evfilt_proc = EVFILT_NOTIMPL;
 
 /*
@@ -57,7 +56,6 @@ linux_kqueue_init(struct kqueue *kq)
 
 
  #if DEADWOOD
-    //might be useful in posix
 
     /* Add each filter's pollable descriptor to the epollset */
     for (i = 0; i < EVFILT_SYSCOUNT; i++) {
@@ -84,7 +82,7 @@ linux_kqueue_init(struct kqueue *kq)
 void
 linux_kqueue_free(struct kqueue *kq UNUSED)
 {
-    abort();//FIXME
+    abort();
 }
 
 static int
@@ -186,9 +184,9 @@ linux_kevent_copyout(struct kqueue *kq, int nready,
          * or disabled.
          */
         if (eventlist->flags & EV_DISPATCH) 
-            knote_disable(filt, kn); //FIXME: Error checking
+            knote_disable(filt, kn);
         if (eventlist->flags & EV_ONESHOT) {
-            knote_delete(filt, kn); //FIXME: Error checking
+            knote_delete(filt, kn);
         }
 
         /* If an empty kevent structure is returned, the event is discarded. */
@@ -385,7 +383,7 @@ epoll_update(int op, struct filter *filt, struct knote *kn, struct epoll_event *
 int
 linux_fd_to_path(char *buf, size_t bufsz, int fd)
 {
-    char path[1024];    //TODO: Maxpathlen, etc.
+    char path[1024];  
 
     if (snprintf(&path[0], sizeof(path), "/proc/%d/fd/%d", getpid(), fd) < 0)
         return (-1);

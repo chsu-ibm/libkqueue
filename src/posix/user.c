@@ -64,7 +64,9 @@ posix_evfilt_user_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSE
     if (src->kev.flags & EV_CLEAR)
         src->kev.fflags &= ~NOTE_TRIGGER;
     if (src->kev.flags & (EV_DISPATCH | EV_CLEAR | EV_ONESHOT)) {
+#if 0
         kqops.eventfd_raise(&src->kdata.kn_eventfd);
+#endif
     }
 
     if (src->kev.flags & EV_DISPATCH) 
@@ -122,7 +124,9 @@ posix_evfilt_user_knote_modify(struct filter *filt, struct knote *kn,
 
     if ((!(kn->kev.flags & EV_DISABLE)) && kev->fflags & NOTE_TRIGGER) {
         kn->kev.fflags |= NOTE_TRIGGER;
+#if 0
         knote_enqueue(filt, kn);
+#endif
         kqops.eventfd_raise(&filt->kf_efd);
     }
 
@@ -149,18 +153,14 @@ posix_evfilt_user_knote_disable(struct filter *filt, struct knote *kn)
     return (0);
 }
 
-/* FIXME: this conflicts with the struct in linux/platform.c
-
 const struct filter evfilt_user = {
     EVFILT_USER,
-    evfilt_user_init,
-    evfilt_user_destroy,
-    evfilt_user_copyout,
-    evfilt_user_knote_create,
-    evfilt_user_knote_modify,
-    evfilt_user_knote_delete,
-    evfilt_user_knote_enable,
-    evfilt_user_knote_disable,   
+    posix_evfilt_user_init,
+    posix_evfilt_user_destroy,
+    posix_evfilt_user_copyout,
+    posix_evfilt_user_knote_create,
+    posix_evfilt_user_knote_modify,
+    posix_evfilt_user_knote_delete,
+    posix_evfilt_user_knote_enable,
+    posix_evfilt_user_knote_disable,   
 };
-
-*/

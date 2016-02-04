@@ -377,7 +377,7 @@ struct {								\
 
 /* Generates prototypes and inline functions */
 #define	RB_PROTOTYPE(name, type, field, cmp)				\
-	RB_PROTOTYPE_INTERNAL(name, type, field, cmp,)
+	RB_PROTOTYPE_INTERNAL(name, type, field, cmp, extern)
 #define	RB_PROTOTYPE_STATIC(name, type, field, cmp)			\
 	RB_PROTOTYPE_INTERNAL(name, type, field, cmp, __unused static)
 #define RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)		\
@@ -396,7 +396,7 @@ attr struct type *name##_RB_MINMAX(struct name *, int);			\
  * Moves node close to the key of elm to top
  */
 #define	RB_GENERATE(name, type, field, cmp)				\
-	RB_GENERATE_INTERNAL(name, type, field, cmp,)
+	RB_GENERATE_INTERNAL(name, type, field, cmp, extern)
 #define	RB_GENERATE_STATIC(name, type, field, cmp)			\
 	RB_GENERATE_INTERNAL(name, type, field, cmp, __unused static)
 #define RB_GENERATE_INTERNAL(name, type, field, cmp, attr)		\

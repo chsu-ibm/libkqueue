@@ -181,14 +181,14 @@ test_evfilt_signal(struct test_context *ctx)
 {
     signal(SIGUSR1, SIG_IGN);
 
-    test(kevent_signal_add, ctx);
-    test(kevent_signal_del, ctx);
-    test(kevent_signal_get, ctx);
-    test(kevent_signal_disable, ctx);
-    test(kevent_signal_enable, ctx);
-    test(kevent_signal_oneshot, ctx);
-    test(kevent_signal_modify, ctx);
+    test(kevent_signal_add, ctx, "dummy");
+    test(kevent_signal_del, ctx, "dummy");
+    test(kevent_signal_get, ctx, "dummy");
+    test(kevent_signal_disable, ctx, "dummy");
+    test(kevent_signal_enable, ctx, "dummy");
+    test(kevent_signal_oneshot, ctx, "dummy");
+    test(kevent_signal_modify, ctx, "dummy");
 #ifdef EV_DISPATCH
-    test(kevent_signal_dispatch, ctx);
+    test(kevent_signal_dispatch, ctx, "dummy");
 #endif
 }

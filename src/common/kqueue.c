@@ -87,7 +87,7 @@ libkqueue_init(void)
     }
 #endif
 
-   kqmap = map_new(get_fd_limit()); // INT_MAX
+   kqmap = map_new(get_fd_limit()); 
    if (kqmap == NULL)
        abort(); 
    if (knote_init() < 0)
@@ -159,7 +159,6 @@ kqueue(void)
     tmp = map_delete(kqmap, kq->kq_id);
     if (tmp != NULL) {
         dbg_puts("FIXME -- memory leak here");
-        // TODO: kqops.kqueue_free(tmp), or (better yet) decrease it's refcount
     }
     if (map_insert(kqmap, kq->kq_id, kq) < 0) {
         dbg_puts("map insertion failed");

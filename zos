@@ -1,0 +1,74 @@
+#!/bin/bash
+
+set -x
+set -e
+set -o pipefail
+
+cmd="$1"
+
+ssh='ssh -x'
+scp=scp
+userhost=ueday@hawaqh1.watson.ibm.com
+destdir=/u/ueday/swift/libkqueue
+
+send_files () {
+  tarfile=/tmp/tmpfile-$$.tar
+  tar --format=pax --exclude .git -cf "$tarfile" "$@"
+  batchfile=/tmp/batch-$$.txt
+  cat <<END > $batchfile
+    put $tarfile $tarfile
+END
+  sftp -b $batchfile $userhost
+  rm $batchfile
+  $ssh $userhost "cd $destdir && pax -ofrom=ISO8859-1,to=IBM-1047 -rf $tarfile || true; rm $tarfile" 2>&1 | grep -v 'Unknown keyword value$' || true
+}
+
+run_autogen_local () {
+  aclocal
+  glibtoolize --force --automake --copy
+  autoheader
+  automake --add-missing --copy
+  autoconf  
+}
+
+run_configure () {
+  #$ssh $userhost "/local/bin/bash --login -c 'cd $destdir && ./configure CC=/usr/lpp/cbclib/xlc/bin/xlc_64 CFLAGS=-q64 CXXCPP=\"/usr/lpp/cbclib/xlc/bin/xlc_64 -E\" OBJCPP=\"/usr/lpp/cbclib/xlc/bin/xlc_64 -E\"'"
+  $ssh $userhost "/local/bin/bash --login -c 'cd $destdir && ./configure CC=xlc CXXCPP=\"xlc -E\" OBJCPP=\"xlc -E\"'"
+}
+
+run_make () {
+  $ssh $userhost "/local/bin/bash --login -c 'cd $destdir && make V=1 kqtest'"
+}
+
+copy_genfiles () {
+  list='Makefile.in aclocal.m4 autom4te.cache/ compile config.guess config.h.in config.sub configure depcomp install-sh ltmain.sh missing test-driver'
+  send_files $list
+}
+
+copy_modfiles () {
+  files=$(git status --porcelain | awk '{ print $2 }')
+  [ -n "$files" ] && send_files $files
+}
+
+copy_allfiles () {
+  send_files .
+}
+
+build () {
+  copy_allfiles
+  run_autogen_local
+  copy_genfiles
+  copy_modfiles
+  run_configure
+  run_make
+}
+
+case "$cmd" in
+  build)
+    build
+  ;;
+  *)
+    echo "Usage: $0 build" 1>&2
+    exit 1
+  ;;
+esac

@@ -212,9 +212,9 @@ test_evfilt_proc(struct test_context *ctx)
     }
     printf(" -- child created (pid %d)\n", (int) pid);
 
-    test(kevent_proc_add, ctx);
-    test(kevent_proc_delete, ctx);
-    test(kevent_proc_get, ctx);
+    test(kevent_proc_add, ctx, "dummy");
+    test(kevent_proc_delete, ctx, "dummy");
+    test(kevent_proc_get, ctx, "dummy");
 
     signal(SIGUSR1, SIG_DFL);
 

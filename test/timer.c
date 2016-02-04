@@ -158,13 +158,13 @@ test_kevent_timer_dispatch(struct test_context *ctx)
 void
 test_evfilt_timer(struct test_context *ctx)
 {
-    test(kevent_timer_add, ctx);
-    test(kevent_timer_del, ctx);
-    test(kevent_timer_get, ctx);
-    test(kevent_timer_oneshot, ctx);
-    test(kevent_timer_periodic, ctx);
-    test(kevent_timer_disable_and_enable, ctx);
+    test(kevent_timer_add, ctx, "dummy");
+    test(kevent_timer_del, ctx, "dummy");
+    test(kevent_timer_get, ctx, "dummy");
+    test(kevent_timer_oneshot, ctx, "dummy");
+    test(kevent_timer_periodic, ctx, "dummy");
+    test(kevent_timer_disable_and_enable, ctx, "dummy");
 #ifdef EV_DISPATCH
-    test(kevent_timer_dispatch, ctx);
+    test(kevent_timer_dispatch, ctx, "dummy");
 #endif
 }

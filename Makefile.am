@@ -6,7 +6,7 @@ kqincludedir = $(includedir)/kqueue/sys
 kqinclude_HEADERS = include/sys/event.h
 dist_man_MANS = kqueue.2
 
-libkqueue_la_CFLAGS = -I./src/common -I./include -Wall -Wextra -Wno-missing-field-initializers -Werror -g -O2 -std=c99 -D_XOPEN_SOURCE=600 -fvisibility=hidden
+libkqueue_la_CFLAGS = -I./src/common -I./include -g -D_XOPEN_SOURCE=600 -D__thread= -Dinline=
 
 libkqueue_la_SOURCES = \
        src/common/filter.c \
@@ -16,21 +16,19 @@ libkqueue_la_SOURCES = \
        src/common/kqueue.c \
        src/posix/platform.c \
        src/posix/platform.h \
-       src/linux/platform.c \
-       src/linux/read.c \
-       src/linux/write.c \
-       src/linux/user.c \
-       src/linux/vnode.c \
-       src/linux/signal.c \
-       src/linux/timer.c \
+       src/posix/read.c \
+       src/posix/write.c \
+       src/posix/user.c \
+       src/posix/vnode.c \
+       src/posix/signal.c \
+       src/posix/timer.c \
        src/common/alloc.h \
        src/common/debug.h \
        src/common/private.h \
        src/common/queue.h \
-       src/common/tree.h \
-       src/linux/platform.h
+       src/common/tree.h
 
-libkqueue_la_LIBADD = -lpthread -lrt
+libkqueue_la_LIBADD = 
 
 pkgconfigdir=$(libdir)/pkgconfig
 pkgconfig_DATA=libkqueue.pc
@@ -51,8 +49,8 @@ kqtest_SOURCES = \
        test/user.c \
        test/common.h
 
-kqtest_CFLAGS = -g -O0 -Wall -Werror -I./include -I./test
+kqtest_CFLAGS = -g -I./include -I./test -D_XOPEN_SOURCE=600
 
-kqtest_LDADD = -lpthread -lrt libkqueue.la
+kqtest_LDADD = libkqueue.la
 
 

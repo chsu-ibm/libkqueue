@@ -123,11 +123,11 @@ typedef int timer_t;
 typedef int pthread_t;
 typedef int sigset_t;
 typedef int pid_t;
-
+/*
 #ifndef __GNUC__
 # define __thread    __declspec(thread)
 #endif
-
+*/
 /* Emulation of pthreads mutex functionality */
 #define PTHREAD_PROCESS_SHARED 1
 #define PTHREAD_PROCESS_PRIVATE 2

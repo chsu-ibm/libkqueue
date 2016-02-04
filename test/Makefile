@@ -24,13 +24,13 @@ lockstat: lockstat.c
 	$(CC) -o lockstat $(CFLAGS) lockstat.c $(LDADD)
 
 kqtest: $(SOURCES)
-	$(CC) -pg -o kqtest -DMAKE_STATIC=1 $(CFLAGS) $(SOURCES) ../libkqueue.a -lpthread
+	$(CC) -pg -o kqtest -DMAKE_STATIC=1 $(CFLAGS) $(SOURCES) ../libkqueue.a
 
 kqtest_debug: $(SOURCES)
-	$(CC) -pg -o kqtest_debug -DMAKE_STATIC=1 $(CFLAGS) $(SOURCES) ../libkqueue_debug.a -lpthread
+	$(CC) -pg -o kqtest_debug -DMAKE_STATIC=1 $(CFLAGS) $(SOURCES) ../libkqueue_debug.a 
 
 static-lib-test: $(SOURCES)
-	$(CC) -o static-lib-test -DMAKE_STATIC=1 $(CFLAGS) $(SOURCES) ../libkqueue.a -lpthread
+	$(CC) -o static-lib-test -DMAKE_STATIC=1 $(CFLAGS) $(SOURCES) ../libkqueue.a 
 
 check: kqtest
 	./kqtest $(KQTEST_OPTS)

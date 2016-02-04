@@ -36,10 +36,11 @@ extern char *KQUEUE_DEBUG_IDENT;
 #elif defined(_WIN32)
 # define THREAD_ID (int)(GetCurrentThreadId())
 #else 
-# error Unsupported platform
+# define THREAD_ID ((int) pthread_self())
+/* # error Unsupported platform */
 #endif
 
-#ifndef NDEBUG
+#ifdef DEBUG
 #define dbg_puts(str)           do {                                \
     if (DEBUG_KQUEUE)                                                      \
       fprintf(stderr, "%s [%d]: %s(): %s\n",                        \

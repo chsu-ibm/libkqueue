@@ -60,10 +60,10 @@ testfile_rename(const char *path, int step)
             */
     if (step == 0) {
         if (rename(path, buf) != 0)
-            err(1,"rename"); 
+            err(1,"rename", "dummy"); 
     } else {
         if (rename(buf, path) != 0)
-            err(1,"rename"); 
+            err(1,"rename", "dummy"); 
     }
 }
 
@@ -76,7 +76,7 @@ test_kevent_vnode_add(struct test_context *ctx)
 
     ctx->vnode_fd = open(ctx->testfile, O_RDWR);
     if (ctx->vnode_fd < 0)
-        err(1, "open of %s", ctx->testfile);
+        err(1, "open of %s", ctx->testfile, "dummy");
 
     kevent_add(ctx->kqfd, &kev, ctx->vnode_fd, EVFILT_VNODE, EV_ADD, 
             NOTE_WRITE | NOTE_ATTRIB | NOTE_RENAME | NOTE_DELETE, 0, NULL);
@@ -256,16 +256,16 @@ test_evfilt_vnode(struct test_context *ctx)
     snprintf(ctx->testfile, sizeof(ctx->testfile), "%s/kqueue-test%d.tmp",
             tmpdir, testing_make_uid());
 
-    test(kevent_vnode_add, ctx);
-    test(kevent_vnode_del, ctx);
-    test(kevent_vnode_disable_and_enable, ctx);
+    test(kevent_vnode_add, ctx, "dummy");
+    test(kevent_vnode_del, ctx, "dummy");
+    test(kevent_vnode_disable_and_enable, ctx, "dummy");
 #ifdef EV_DISPATCH
-    test(kevent_vnode_dispatch, ctx);
+    test(kevent_vnode_dispatch, ctx, "dummy");
 #endif
-    test(kevent_vnode_note_write, ctx);
-    test(kevent_vnode_note_attrib, ctx);
-    test(kevent_vnode_note_rename, ctx);
-    test(kevent_vnode_note_delete, ctx);
+    test(kevent_vnode_note_write, ctx, "dummy");
+    test(kevent_vnode_note_attrib, ctx, "dummy");
+    test(kevent_vnode_note_rename, ctx, "dummy");
+    test(kevent_vnode_note_delete, ctx, "dummy");
     /* TODO: test r590 corner case where a descriptor is closed and
              the associated knote is automatically freed. */
     unlink(ctx->testfile);

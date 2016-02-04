@@ -34,27 +34,27 @@ create_socket_connection(int *client, int *server, const short port)
     sain.sin_family = AF_INET;
     sain.sin_port = htons(port);
     if ((srvr = socket(PF_INET, SOCK_STREAM, 0)) < 0) 
-	err(1, "socket");
+	err(1, "socket", "dummy");
     if (setsockopt(srvr, SOL_SOCKET, SO_REUSEADDR, 
                 (char *) &one, sizeof(one)) != 0) 
-	err(1, "setsockopt");
+	err(1, "setsockopt", "dummy");
     if (bind(srvr, (struct sockaddr *) &sain, sa_len) < 0) {
         printf("unable to bind to port %d\n", port);
-        err(1, "bind-1");
+        err(1, "bind-1", "dummy");
     }
     if (listen(srvr, 100) < 0)
-	err(1, "listen");
+	err(1, "listen", "dummy");
 
     /* Simulate a client connecting to the server */
     sain.sin_family = AF_INET;
     sain.sin_port = htons(port);
     sain.sin_addr.s_addr = inet_addr("127.0.0.1");
     if ((clnt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-       err(1, "clnt: socket"); 
+       err(1, "clnt: socket", "dummy"); 
     if (connect(clnt, (struct sockaddr *) &sain, sa_len) < 0)
-       err(1, "clnt: connect"); 
+       err(1, "clnt: connect", "dummy"); 
     if ((accepted = accept(srvr, NULL, 0)) < 0)
-       err(1, "srvr: accept"); 
+       err(1, "srvr: accept", "dummy"); 
 
     *client = clnt;
     *server = accepted;
@@ -259,14 +259,14 @@ test_kevent_socket_listen_backlog(struct test_context *ctx)
     sain.sin_family = AF_INET;
     sain.sin_port = htons(port);
     if ((srvr = socket(PF_INET, SOCK_STREAM, 0)) < 0) 
-        err(1, "socket()");
+        err(1, "socket()", "dummy");
     if (setsockopt(srvr, SOL_SOCKET, SO_REUSEADDR, 
                 (char *) &one, sizeof(one)) != 0)
-        err(1, "setsockopt()");
+        err(1, "setsockopt()", "dummy");
     if (bind(srvr, (struct sockaddr *) &sain, sa_len) < 0)
-        err(1, "bind-2", port);
+        err(1, "bind-2", port, "dummy");
     if (listen(srvr, 100) < 0)
-        err(1, "listen()");
+        err(1, "listen()", "dummy");
 
     /* Watch for events on the socket */
     test_no_kevents(ctx->kqfd);
@@ -278,9 +278,9 @@ test_kevent_socket_listen_backlog(struct test_context *ctx)
     sain.sin_port = htons(port);
     sain.sin_addr.s_addr = inet_addr("127.0.0.1");
     if ((clnt = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-        err(1, "socket()");
+        err(1, "socket()", "dummy");
     if (connect(clnt, (struct sockaddr *) &sain, sa_len) < 0)
-        err(1, "connect()");
+        err(1, "connect()", "dummy");
 
     /* Verify that data=1 */
     kev.data = 1;
@@ -424,19 +424,19 @@ test_evfilt_read(struct test_context *ctx)
 {
     create_socket_connection(&ctx->client_fd, &ctx->server_fd, ctx->iteration + 23456);
 
-    test(kevent_socket_add, ctx);
-    test(kevent_socket_del, ctx);
-    test(kevent_socket_add_without_ev_add, ctx);
-    test(kevent_socket_get, ctx);
-    test(kevent_socket_disable_and_enable, ctx);
-    test(kevent_socket_oneshot, ctx);
-    test(kevent_socket_clear, ctx);
+    test(kevent_socket_add, ctx, "dummy");
+    test(kevent_socket_del, ctx, "dummy");
+    test(kevent_socket_add_without_ev_add, ctx, "dummy");
+    test(kevent_socket_get, ctx, "dummy");
+    test(kevent_socket_disable_and_enable, ctx, "dummy");
+    test(kevent_socket_oneshot, ctx, "dummy");
+    test(kevent_socket_clear, ctx, "dummy");
 #ifdef EV_DISPATCH
-    test(kevent_socket_dispatch, ctx);
+    test(kevent_socket_dispatch, ctx, "dummy");
 #endif
-    test(kevent_socket_listen_backlog, ctx);
-    test(kevent_socket_eof, ctx);
-    test(kevent_regular_file, ctx);
+    test(kevent_socket_listen_backlog, ctx, "dummy");
+    test(kevent_socket_eof, ctx, "dummy");
+    test(kevent_regular_file, ctx, "dummy");
     close(ctx->client_fd);
     close(ctx->server_fd);
 }

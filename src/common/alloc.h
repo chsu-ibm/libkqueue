@@ -39,14 +39,14 @@
 # include <unistd.h>
 #endif
 
-static __thread struct {
+static /* __thread */ struct {
     void  **ac_cache;       /* An array of reusable memory objects */
     size_t  ac_count;       /* The number of objects in the cache */
     size_t  ac_max;         /* The maximum number of cached objects */
     size_t  ac_size;        /* The size, in bytes, of each object */
 } _ma;
 
-static inline int
+static int
 mem_init(size_t objsize, size_t cachesize)
 {
     _ma.ac_size = objsize;
@@ -54,7 +54,7 @@ mem_init(size_t objsize, size_t cachesize)
     return (_ma.ac_cache == NULL ? -1 : 0);
 }
 
-static inline void *
+static void *
 mem_alloc(void)
 {
     if (_ma.ac_count > 0) 

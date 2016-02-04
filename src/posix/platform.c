@@ -16,6 +16,23 @@
 
 #include "../common/private.h"
 
+const struct filter evfilt_proc = EVFILT_NOTIMPL;
+
+const struct kqueue_vtable kqops = {
+    posix_kqueue_init,
+    posix_kqueue_free,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+    posix_eventfd_init,
+    posix_eventfd_close,
+    posix_eventfd_raise,
+    posix_eventfd_lower,
+    posix_eventfd_descriptor
+};
+
+
 int
 posix_kqueue_init(struct kqueue *kq UNUSED)
 {

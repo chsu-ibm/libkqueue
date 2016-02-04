@@ -178,14 +178,14 @@ test_kevent_user_dispatch(struct test_context *ctx)
 void
 test_evfilt_user(struct test_context *ctx)
 {
-    test(kevent_user_add_and_delete, ctx);
-    test(kevent_user_get, ctx);
-    test(kevent_user_get_hires, ctx);
-    test(kevent_user_disable_and_enable, ctx);
-    test(kevent_user_oneshot, ctx);
-    test(kevent_user_multi_trigger_merged, ctx);
+    test(kevent_user_add_and_delete, ctx, "dummy");
+    test(kevent_user_get, ctx, "dummy");
+    test(kevent_user_get_hires, ctx, "dummy");
+    test(kevent_user_disable_and_enable, ctx, "dummy");
+    test(kevent_user_oneshot, ctx, "dummy");
+    test(kevent_user_multi_trigger_merged, ctx, "dummy");
 #ifdef EV_DISPATCH
-    test(kevent_user_dispatch, ctx);
+    test(kevent_user_dispatch, ctx, "dummy");
 #endif
     /* TODO: try different fflags operations */
 }

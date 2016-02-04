@@ -27,7 +27,6 @@ int
 knote_init(void)
 {
     return 0;
-//    return (mem_init(sizeof(struct knote), 1024));
 }
 
 static int
@@ -100,7 +99,7 @@ knote_delete(struct filter *filt, struct knote *kn)
     }
     pthread_rwlock_unlock(&filt->kf_knote_mtx);
 
-    filt->kn_delete(filt, kn); //XXX-FIXME check return value
+    filt->kn_delete(filt, kn);
 
     kn->kn_flags |= KNFL_KNOTE_DELETED;
 
@@ -151,10 +150,8 @@ knote_disable(struct filter *filt, struct knote *kn)
 {
     assert(!(kn->kev.flags & EV_DISABLE));
 
-    filt->kn_disable(filt, kn); //TODO: Error checking
+    filt->kn_disable(filt, kn);
     KNOTE_DISABLE(kn);
     return (0);
 }
-
-//TODO: knote_enable()
 
