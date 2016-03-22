@@ -52,9 +52,9 @@ callgrind: kqtest
 cachegrind: kqtest
 	rm -f cachegrind.*
 	valgrind --tool=cachegrind --branch-sim=yes ./kqtest || true
-	#CLI:
-	#cg_annotate cachegrind.*
-	#GUI:
+#	CLI:
+#	cg_annotate cachegrind.*
+#	GUI:
 	kcachegrind
 
 check-installed:

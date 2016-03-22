@@ -31,10 +31,33 @@
 #define atomic_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
 #define atomic_ptr_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
 #else 
-#define atomic_inc(p)   (0) 
-#define atomic_dec(p)   (0)
-#define atomic_cas(p, oval, nval) (0)
-#define atomic_ptr_cas(p, oval, nval) (0)
+
+static inline void *
+atomic_ptr_cas(void **p, void *oval, void *nval)
+{
+#ifdef __64BIT__
+    __cds1(&oval, p, &nval);
+#else
+    __cs1(&oval, p, &nval);
+#endif
+    return oval;
+}
+
+static inline unsigned int
+__atomic_add(unsigned int *p, int val)
+{
+    unsigned int tmp, old;
+    do {
+        old = *p;
+        tmp = old + val;
+    } while (__cs1(&old, p, &tmp));
+
+    return tmp;
+}
+
+#define atomic_inc(p)   (__atomic_add(p, 1))
+#define atomic_dec(p)   (__atomic_add(p, -1))
+
 #endif
 /*
  * GCC-compatible branch prediction macros
@@ -75,7 +98,7 @@
 void    posix_kqueue_free(struct kqueue *);
 int     posix_kqueue_init(struct kqueue *);
 
-int     posix_kevent_wait(struct kqueue *, const struct timespec *);
+int     posix_kevent_wait(struct kqueue *, int nevents, const struct timespec *);
 int     posix_kevent_copyout(struct kqueue *, int, struct kevent *, int);
 
 int     posix_eventfd_init(struct eventfd *);

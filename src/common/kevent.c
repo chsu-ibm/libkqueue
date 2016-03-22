@@ -14,6 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#pragma csect (CODE,   "common#kevent#C")
+#pragma csect (STATIC, "common#kevent#S")
+#pragma csect (TEST,   "common#kevent#T")
+
+
 /* To get asprintf(3) */
 #define _GNU_SOURCE
 

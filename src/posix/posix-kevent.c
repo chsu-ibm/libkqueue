@@ -14,6 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#pragma csect (CODE,   "posix#kevent#C")
+#pragma csect (STATIC, "posix#kevent#S")
+#pragma csect (TEST,   "posix#kevent#T")
+
 #include <stdlib.h>
 
 #include "sys/event.h"
@@ -24,6 +28,7 @@ const struct filter evfilt_proc = EVFILT_NOTIMPL;
 int
 posix_kevent_wait(
         struct kqueue *kq, 
+        int nevents,
         const struct timespec *timeout)
 {
     int n, nfds;

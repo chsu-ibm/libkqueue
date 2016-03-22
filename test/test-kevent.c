@@ -14,6 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#pragma csect (CODE,   "test#kevent#C")
+#pragma csect (STATIC, "test#kevent#S")
+#pragma csect (TEST,   "test#kevent#T")
+
+
 #include "common.h"
 
 extern int kqfd;

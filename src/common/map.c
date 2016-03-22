@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <fcntl.h>
+#include <errno.h>
+
 #include "private.h"
 
 struct map {
@@ -25,11 +28,12 @@ struct map *
 map_new(size_t len)
 {
     struct map *dst;
+    int fd;
 
     dst = calloc(1, sizeof(struct map));
     if (dst == NULL)
         return (NULL);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__MVS__)
 	dst->data = calloc(len, sizeof(void*));
 	if(dst->data == NULL) {
 		dbg_perror("calloc()");
@@ -38,13 +42,22 @@ map_new(size_t len)
 	}
 	dst->len = len;
 #else
-    dst->data = mmap(NULL, len * sizeof(void *), PROT_READ | PROT_WRITE, 
-            MAP_PRIVATE , -1, 0);
+    fd = open("/dev/zero", O_RDWR);
+    if (fd < 0) {
+        dbg_perror("open(2)");
+        free(dst);
+        return (NULL);
+    }
+
+    dst->data = mmap(0, len * sizeof(void *), PROT_READ | PROT_WRITE, 
+            MAP_PRIVATE , fd, 0);
     if (dst->data == MAP_FAILED) {
         dbg_perror("mmap(2)");
         free(dst);
         return (NULL);
     }
+    close(fd);
+    
     dst->len = len;
 #endif
 

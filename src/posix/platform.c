@@ -21,7 +21,7 @@ const struct filter evfilt_proc = EVFILT_NOTIMPL;
 const struct kqueue_vtable kqops = {
     posix_kqueue_init,
     posix_kqueue_free,
-        NULL,
+        posix_kevent_wait,
         NULL,
         NULL,
         NULL,
@@ -36,6 +36,17 @@ const struct kqueue_vtable kqops = {
 int
 posix_kqueue_init(struct kqueue *kq UNUSED)
 {
+    kq->kq_id = open("/dev/null", O_RDONLY); //FIXME
+    if (kq->kq_id < 0) {
+        dbg_perror("FIXME ");
+        return (-1);
+    }
+
+    if (filter_register_all(kq) < 0) {
+        close(kq->kq_id);
+        return (-1);
+    }
+
     return (0);
 }
 

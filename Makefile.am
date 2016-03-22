@@ -6,7 +6,7 @@ kqincludedir = $(includedir)/kqueue/sys
 kqinclude_HEADERS = include/sys/event.h
 dist_man_MANS = kqueue.2
 
-libkqueue_la_CFLAGS = -I./src/common -I./include -g -D_XOPEN_SOURCE=600 -D__thread= -Dinline=
+libkqueue_la_CFLAGS = -I./src/common -I./include -D_XOPEN_SOURCE=600 -D__thread= -Dinline= -g
 
 libkqueue_la_SOURCES = \
        src/common/filter.c \
@@ -22,6 +22,7 @@ libkqueue_la_SOURCES = \
        src/posix/vnode.c \
        src/posix/signal.c \
        src/posix/timer.c \
+       src/posix/posix-kevent.c \
        src/common/alloc.h \
        src/common/debug.h \
        src/common/private.h \
@@ -38,18 +39,18 @@ check_PROGRAMS = kqtest
 TESTS = kqtest
 
 kqtest_SOURCES = \
-       test/main.c \
-       test/kevent.c \
-       test/test.c \
-       test/proc.c \
-       test/read.c \
-       test/signal.c \
-       test/timer.c \
-       test/vnode.c \
-       test/user.c \
+       test/test-main.c \
+       test/test-kevent.c \
+       test/test-test.c \
+       test/test-proc.c \
+       test/test-read.c \
+       test/test-signal.c \
+       test/test-timer.c \
+       test/test-vnode.c \
+       test/test-user.c \
        test/common.h
 
-kqtest_CFLAGS = -g -I./include -I./test -D_XOPEN_SOURCE=600
+kqtest_CFLAGS = -I./include -I./test -D_XOPEN_SOURCE=600 -g
 
 kqtest_LDADD = libkqueue.la
 

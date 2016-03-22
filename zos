@@ -32,12 +32,12 @@ run_autogen_local () {
 }
 
 run_configure () {
-  #$ssh $userhost "/local/bin/bash --login -c 'cd $destdir && ./configure CC=/usr/lpp/cbclib/xlc/bin/xlc_64 CFLAGS=-q64 CXXCPP=\"/usr/lpp/cbclib/xlc/bin/xlc_64 -E\" OBJCPP=\"/usr/lpp/cbclib/xlc/bin/xlc_64 -E\"'"
-  $ssh $userhost "/local/bin/bash --login -c 'cd $destdir && ./configure CC=xlc CXXCPP=\"xlc -E\" OBJCPP=\"xlc -E\"'"
+  $ssh $userhost "/local/bin/bash --login -c 'cd $destdir && ./configure CC=\"xlc\" CFLAGS=\"-qxplink -q64\" CPP=\"xlc -E\" CXXCPP=\"xlc -E\" OBJCPP=\"xlc -E\"'"
+  #$ssh $userhost "/local/bin/bash --login -c 'cd $destdir && ./configure CC=\"xlc\" CFLAGS=\"-qxplink -q32\" CPP=\"xlc -E\" CXXCPP=\"xlc -E\" OBJCPP=\"xlc -E\"'"
 }
 
 run_make () {
-  $ssh $userhost "/local/bin/bash --login -c 'cd $destdir && make V=1 kqtest'"
+  $ssh $userhost "/local/bin/bash --login -c 'cd $destdir && rm -f kqtest && make V=1 kqtest && dbgld kqtest'"
 }
 
 copy_genfiles () {
@@ -46,7 +46,7 @@ copy_genfiles () {
 }
 
 copy_modfiles () {
-  files=$(git status --porcelain | awk '{ print $2 }')
+  files=$(git status --porcelain | awk '{ if ($4) { print $4 } else { print $2 }}')
   [ -n "$files" ] && send_files $files
 }
 
