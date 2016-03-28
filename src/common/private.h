@@ -45,6 +45,8 @@ struct evfilt_data;
 #elif defined(__sun)
 # include "../posix/platform.h"
 # include "../solaris/platform.h"
+#elif defined(__MVS__)
+# include "../zos/platform.h"
 #else
 /* # error Unknown platform */
 # include "../posix/platform.h"

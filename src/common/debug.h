@@ -35,18 +35,20 @@ extern char *KQUEUE_DEBUG_IDENT;
 # define THREAD_ID ((int) pthread_self())
 #elif defined(_WIN32)
 # define THREAD_ID (int)(GetCurrentThreadId())
-#else 
-static inline long __get_tid() {
-        pthread_t tid;
-        tid = pthread_self();
-        return *(long *)&tid;
+#elif defined(__MVS__)
+
+static inline long long __get_tid() {
+        pthread_t tid = pthread_self();
+        return *(long long *)&tid;
 }
 
-# define THREAD_ID (__get_tid())
-/* # error Unsupported platform */
+# define THREAD_ID ( __get_tid())
+#else 
+# error Unsupported platform
 #endif
 
 #ifndef NDEBUG
+#ifdef __MVS__ 
 #define dbg_puts(str)           do {                                \
     if (DEBUG_KQUEUE)                                              \
         fprintf(stderr, "%s [%ld]: %s(): %s\n",                      \
@@ -65,17 +67,34 @@ static inline long __get_tid() {
             KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, str,                \
             strerror(errno), errno);                              \
 } while (0)
+#else
+#define dbg_puts(str)           do {                                \
+    if (DEBUG_KQUEUE)                                                      \
+      fprintf(stderr, "%s [%d]: %s(): %s\n",                        \
+              KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, str);               \
+} while (0)
+
+#define dbg_printf(fmt,...)     do {                                \
+    if (DEBUG_KQUEUE)                                                      \
+      fprintf(stderr, "%s [%d]: %s(): "fmt"\n",                     \
+              KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, __VA_ARGS__);       \
+} while (0)
+
+#define dbg_perror(str)         do {                                \
+    if (DEBUG_KQUEUE)                                                      \
+      fprintf(stderr, "%s [%d]: %s(): %s: %s (errno=%d)\n",         \
+              KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, str,                \
+              strerror(errno), errno);                              \
+} while (0)
+#endif
 
 # define reset_errno()          do { errno = 0; } while (0)
 
 # if defined(_WIN32)
 #  define dbg_lasterror(str)     do {                                \
-    if (DEBUG_KQUEUE) {                                                     \
-        pthread_t __tid;                                            \
-        __tid = THREAD_ID;                                          \
-        fprintf(stderr, "%s: [%d] %s(): %s: (LastError=%d)\n",          \
+    if (DEBUG_KQUEUE)                                                      \
+      fprintf(stderr, "%s: [%d] %s(): %s: (LastError=%d)\n",        \
               KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, str, (int)GetLastError());            \
-    }                                                               \
 } while (0)
 
 #  define dbg_wsalasterror(str)  do {                                \
@@ -102,7 +121,11 @@ static inline long __get_tid() {
 typedef struct {
     pthread_mutex_t mtx_lock; 
     int mtx_status; 
-    long mtx_owner;
+#ifdef __MVS__
+    long long mtx_owner;
+#else
+    int mtx_owner;
+#endif
 } tracing_mutex_t; 
 
 # define tracing_mutex_init(mtx, attr) do { \
