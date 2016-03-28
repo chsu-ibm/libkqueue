@@ -1,0 +1,24 @@
+export _BPXK_JOBLOG=STDERR
+export KQUEUE_DEBUG=1
+
+setlp=1
+for i in ${LIBPATH//:/ }
+  do
+    if [[ $i == '.' ]] ; then
+      setlp=0
+      break
+    fi
+  done
+if [[ $setlp == 1 ]]; then
+  export LIBPATH=$LIBPATH:.
+fi
+
+touch .dbxsetup
+touch .dbxhistory
+touch .dbxinit
+
+if ! [[ -r .dbxinit ]] ; then
+cat > .dbxinit << "END1"
+set $commandedit
+END1
+fi
