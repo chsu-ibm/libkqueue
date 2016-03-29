@@ -22,43 +22,132 @@
 
 #include "../../include/sys/event.h"
 
+#ifndef __MVS__
+#  error zos only
+#endif
 /*
  * GCC-compatible atomic operations 
- */
-#if 0
 #define atomic_inc(p)   __sync_add_and_fetch((p), 1)
 #define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #define atomic_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
 #define atomic_ptr_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
-#else 
+*/
 
-static inline void *
-atomic_ptr_cas(void **p, void *oval, void *nval)
+#include <stdio.h>
+#include <assert.h>
+__inline long long __zsync_val_compare_and_swap64 (long long * __p, long long  __compVal, long long  __exchVal ) {
+   // This function compares the value of __compVal to the value of the variable that __p points to.
+   // If they are equal, the value of __exchVal is stored in the address that is specified by __p;
+   // otherwise, no operation is performed.
+   // Return value The function returns the initial value of the variable that __p points to.
+   long long initv;
+   __asm( " csg %1,%2,%3 \n "
+          " stg %1,%0 \n"
+          : "=m"(initv)
+          : "r"(__compVal),"r"(__exchVal), "m"(*__p)
+          : "r2","r3","r6");
+   return initv;
+}
+__inline int __zsync_val_compare_and_swap32 ( int * __p, int __compVal, int __exchVal ) {
+   // This function compares the value of __compVal to the value of the variable that __p points to.
+   // If they are equal, the value of __exchVal is stored in the address that is specified by __p;
+   // otherwise, no operation is performed.
+   // Return value The function returns the initial value of the variable that __p points to.
+   int initv;
+   __asm( " cs  %1,%2,%3 \n "
+          " st %1,%0 \n"
+          : "=m"(initv)
+          : "r"(__compVal),"r"(__exchVal), "m"(*__p)
+          : "r2","r3","r6");
+   return initv;
+}
+__inline int __atomic_inc32(int *p) {
+   assert(!(((int )p) & 0x00000003)); // boundary alignment required
+   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   __asm( " asi %0,1\n "
+          : "=m"(*p)
+          : );
+   
+}
+__inline void __atomic_inc64(long long *p) {
+   assert(!(((int )p) & 0x00000005)); // boundary alignment required
+   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   __asm( " agsi %0,1\n "
+          : "=m"(*p)
+          : );
+}
+__inline void __atomic_dec32(int *p) {
+   assert(!(((int )p) & 0x00000003)); // boundary alignment required
+   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   __asm( " asi %0,-1\n "
+          : "=m"(*p)
+          : );
+}
+__inline void __atomic_dec64(long long *p) {
+   assert(!(((int )p) & 0x00000005)); // boundary alignment required
+   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   __asm( " agsi %0,-1\n "
+          : "=m"(*p)
+          : );
+}
+
+static inline void * atomic_ptr_cas(void **p, void *oval, void *nval)
 {
-#ifdef __64BIT__
-    __cds1(&oval, p, &nval);
+#ifdef _LP64
+  return (void *) __zsync_val_compare_and_swap64((long long *)p, (long long) oval, (long long) nval);
 #else
-    __cs1(&oval, p, &nval);
+  return (void *) __zsync_val_compare_and_swap32((int *)p, (int) oval, (int) nval);
 #endif
-    return oval;
 }
 
-static inline unsigned int
-__atomic_add(unsigned int *p, int val)
-{
-    unsigned int tmp, old;
-    do {
-        old = *p;
-        tmp = old + val;
-    } while (__cs1(&old, p, &tmp));
+// old static inline void *
+// old atomic_ptr_cas(void **p, void *oval, void *nval)
+// old {
+// old #ifdef __64BIT__
+// old     __cds1(&oval, p, &nval);
+// old #else
+// old     __cs1(&oval, p, &nval);
+// old #endif
+// old     return oval;
+// old }
+// old 
+// old static inline unsigned int
+// old __atomic_add(unsigned int *p, int val)
+// old {
+// old     unsigned int tmp, old;
+// old     do {
+// old         old = *p;
+// old         tmp = old + val;
+// old     } while (__cs1(&old, p, &tmp));
+// old 
+// old     return tmp;
+// old }
+// old 
+// old #define atomic_inc(p)   (__atomic_add(p, 1))
+// old #define atomic_dec(p)   (__atomic_add(p, -1))
+// old 
 
-    return tmp;
+__inline int atomic_inc(int * p) {
+  int v0;
+  int v1;
+  do {
+    v0 = *p;
+    v1 = __zsync_val_compare_and_swap32((int *)p, v0 , v0+1);
+  }
+  while (v1 != v0);
+  return v0;
+}
+__inline int atomic_dec(int * p) {
+  int v0;
+  int v1;
+  do {
+    v0 = *p;
+    v1 = __zsync_val_compare_and_swap32((int *)p, v0 , v0-1);
+  }
+  while (v1 != v0);
+  return v0;
 }
 
-#define atomic_inc(p)   (__atomic_add(p, 1))
-#define atomic_dec(p)   (__atomic_add(p, -1))
-
-#endif
 /*
  * GCC-compatible branch prediction macros
  */

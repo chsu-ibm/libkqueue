@@ -32,6 +32,7 @@ LINK=/c390/archive/zosdev/latest/xlc -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,
 LINKEXE=/c390/archive/zosdev/latest/xlc -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,LIST,LP64 -W l,XPLINK
 
 CFLAGS_DLL=-q64 \
+-qlist -qsource -qasm \
 -qnosearch -qxplink -qnocsect \
 -DHAVE_CONFIG_H -I$(SRC_DIR) -I$(SRC_DIR)/src/common -I$(SRC_DIR)/include \
 -D_XOPEN_SOURCE=600 \
@@ -44,6 +45,7 @@ CFLAGS_DLL=-q64 \
 -g -qdll $(MORE_FLAGS) -qexportall -c -M 
 
 CFLAGS_EXE=-q64 \
+-qlist -qsource -qasm \
 -qnosearch -qxplink -qnocsect \
 -DHAVE_CONFIG_H -I$(SRC_DIR) -I$(SRC_DIR)/src/common -I$(SRC_DIR)/include \
 -D_XOPEN_SOURCE=600 \
@@ -114,7 +116,7 @@ ceeuopt.o: $(ME)
 
 %.o: %.c ../config.h $(ME)
 	echo "compiling in " $(PWD)
-	$(CC) -c $(CFLAGS) $<
+	$(CC) -c $(CFLAGS) $< >$(notdir $(patsubst %.c,%.lst,$<))
 
 %.o: %.asm $(ME)
 	echo "assembling in " $(PWD)
