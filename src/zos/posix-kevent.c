@@ -33,6 +33,8 @@ posix_kevent_wait(
 {
     int n, nfds;
     fd_set rfds;
+    struct timespec ts;
+    const struct timespec * tsp = timeout;
 
     int i ;
 
@@ -49,13 +51,20 @@ posix_kevent_wait(
             ret = fstat(i, &info);
             if (ret < 0) {
                 perror ("fstat");
-                fprintf(stderr, "fd=%d is a NOT valid file descriptor\n", i);
+                fprintf(stderr, "fd=%d is NOT a valid file descriptor\n", i);
             } else {
                 fprintf(stderr, "fd=%d is a valid file descriptor\n", i);
             }
         }
     }
 
+
+    if (timeout == NULL) {
+       ts.tv_sec  = 2592000;
+       ts.tv_nsec = 0;
+       timeout = &ts;
+    }
+ 
     n = pselect(nfds, &rfds, NULL , NULL, timeout, NULL);
     if (n < 0) {
         if (errno == EINTR) {
@@ -77,6 +86,7 @@ posix_kevent_copyout(struct kqueue *kq, int nready,
 {
     struct filter *filt;
     int i, rv, nret;
+    struct knote *kn;
 
     nret = 0;
     for (i = 0; (i < EVFILT_SYSCOUNT && nready > 0 && nevents > 0); i++) {
@@ -85,7 +95,10 @@ posix_kevent_copyout(struct kqueue *kq, int nready,
 //        dbg_printf("pfd[%d] = %d", i, filt->kf_pfd);
         if (FD_ISSET(filt->kf_pfd, &kq->kq_rfds)) {
             dbg_printf("pending events for filter %d (%s)", filt->kf_id, filter_name(filt->kf_id));
-            rv = filt->kf_copyout(filt, eventlist, nevents);
+
+            kn = (struct knote *) NULL; //FIXME we need to retrive a knote from somewhere
+
+            rv = filt->kf_copyout(eventlist, kn, NULL);
             if (rv < 0) {
                 dbg_puts("kevent_copyout failed");
                 nret = -1;

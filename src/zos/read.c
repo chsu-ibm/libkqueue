@@ -1,6 +1,8 @@
 
 #include "private.h"
 
+#include <sys/ioctl.h>
+
 int
 evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
 {
@@ -10,9 +12,30 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
     kq = src->kn_kq;    
     fd = (int)src->kev.ident;
 
+    memcpy(dst, &src->kev, sizeof(*dst));
+
     fprintf(stderr, "evfilt_read_copyout is called. fd=%d\n", fd);
 
-    return -1;
+    if (src->kn_flags & KNFL_PASSIVE_SOCKET) {
+        /* On return, data contains the length of the 
+           socket backlog. This is not available under Linux.
+         */
+        dst->data = 1;
+    } else {
+        /* On return, data contains the number of bytes of protocol
+           data available to read.
+         */
+        if (ioctl(dst->ident, FIONREAD, &dst->data) < 0) {
+            /* race condition with socket close, so ignore this error */
+            dbg_puts("ioctl(2) of socket failed");
+            dst->data = 0;
+        } else {
+            if (dst->data == 0)
+                dst->flags |= EV_EOF;
+        }
+    }
+
+    return 0;
 }
 
 int

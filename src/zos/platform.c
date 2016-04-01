@@ -22,7 +22,7 @@ const struct kqueue_vtable kqops = {
     posix_kqueue_init,
     posix_kqueue_free,
         posix_kevent_wait,
-        NULL,
+        posix_kevent_copyout,
         NULL,
         NULL,
     posix_eventfd_init,
