@@ -14,16 +14,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#pragma csect (CODE,   "posix#kevent#C")
-#pragma csect (STATIC, "posix#kevent#S")
-#pragma csect (TEST,   "posix#kevent#T")
+#define _POSIX_C_SOURCE 200112L
 
 #include <stdlib.h>
+#include <sys/select.h>
 
 #include "sys/event.h"
 #include "private.h"
 
 const struct filter evfilt_proc = EVFILT_NOTIMPL;
+
 
 int
 posix_kevent_wait(
@@ -34,10 +34,28 @@ posix_kevent_wait(
     int n, nfds;
     fd_set rfds;
 
+    int i ;
+
     nfds = kq->kq_nfds;
     rfds = kq->kq_fds;
 
     dbg_puts("waiting for events");
+
+    for (i = 0; i < nfds; i++) {
+        if (FD_ISSET(i, &rfds)) {
+            int ret;
+            struct stat info;
+            
+            ret = fstat(i, &info);
+            if (ret < 0) {
+                perror ("fstat");
+                fprintf(stderr, "fd=%d is a NOT valid file descriptor\n", i);
+            } else {
+                fprintf(stderr, "fd=%d is a valid file descriptor\n", i);
+            }
+        }
+    }
+
     n = pselect(nfds, &rfds, NULL , NULL, timeout, NULL);
     if (n < 0) {
         if (errno == EINTR) {

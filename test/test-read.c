@@ -58,6 +58,9 @@ create_socket_connection(int *client, int *server, const short port)
 
     *client = clnt;
     *server = accepted;
+
+    fprintf(stderr, "Client FD=%d, Server FD=%d, Port=%d\n", clnt, accepted, (int)port);
+    
 }
 
 static void
