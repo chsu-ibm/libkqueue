@@ -45,7 +45,7 @@ __inline long long __zsync_val_compare_and_swap64 (long long * __p, long long  _
           " stg %1,%0 \n"
           : "=m"(initv)
           : "r"(__compVal),"r"(__exchVal), "m"(*__p)
-          : "r2","r3","r6");
+          : );
    return initv;
 }
 __inline int __zsync_val_compare_and_swap32 ( int * __p, int __compVal, int __exchVal ) {
@@ -58,10 +58,10 @@ __inline int __zsync_val_compare_and_swap32 ( int * __p, int __compVal, int __ex
           " st %1,%0 \n"
           : "=m"(initv)
           : "r"(__compVal),"r"(__exchVal), "m"(*__p)
-          : "r2","r3","r6");
+          : );
    return initv;
 }
-__inline int __atomic_inc32(int *p) {
+__inline void __atomic_inc32(int *p) {
    assert(!(((int )p) & 0x00000003)); // boundary alignment required
    assert(0x04 & *(const char *)205); // interlock-access fac 1 present
    __asm( " asi %0,1\n "
@@ -70,7 +70,7 @@ __inline int __atomic_inc32(int *p) {
    
 }
 __inline void __atomic_inc64(long long *p) {
-   assert(!(((int )p) & 0x00000005)); // boundary alignment required
+   assert(!(((int )p) & 0x00000007)); // boundary alignment required
    assert(0x04 & *(const char *)205); // interlock-access fac 1 present
    __asm( " agsi %0,1\n "
           : "=m"(*p)
@@ -84,7 +84,7 @@ __inline void __atomic_dec32(int *p) {
           : );
 }
 __inline void __atomic_dec64(long long *p) {
-   assert(!(((int )p) & 0x00000005)); // boundary alignment required
+   assert(!(((int )p) & 0x00000007)); // boundary alignment required
    assert(0x04 & *(const char *)205); // interlock-access fac 1 present
    __asm( " agsi %0,-1\n "
           : "=m"(*p)
