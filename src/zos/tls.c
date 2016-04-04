@@ -34,5 +34,4 @@ struct tlsflat * get_tls() {
 
 static void process_cleanup_tls() {
   	pthread_key_delete(tlskey);
-        fprintf(stderr,"tlskey %lld\n",*(long long *)&tlskey);
 }
