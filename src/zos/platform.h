@@ -17,6 +17,8 @@
 #ifndef  _KQUEUE_POSIX_PLATFORM_H
 #define  _KQUEUE_POSIX_PLATFORM_H
 
+// #define _OE_SOCKETS
+#define _OPEN_MSGQ_EXT
 /* Required by glibc for MAP_ANON */
 #define __USE_MISC 1
 
@@ -54,7 +56,7 @@ __inline int __zsync_val_compare_and_swap32 ( int * __p, int __compVal, int __ex
    // otherwise, no operation is performed.
    // Return value The function returns the initial value of the variable that __p points to.
    int initv;
-   __asm( " cs  %1,%2,%3 \n "
+   __asm( " csy %1,%2,%3 \n "
           " st %1,%0 \n"
           : "=m"(initv)
           : "r"(__compVal),"r"(__exchVal), "m"(*__p)
@@ -205,5 +207,16 @@ void    posix_eventfd_close(struct eventfd *);
 int     posix_eventfd_raise(struct eventfd *);
 int     posix_eventfd_lower(struct eventfd *);
 int     posix_eventfd_descriptor(struct eventfd *);
+
+
+typedef struct tlsflat {
+   char buf1[64];
+   char buf2[1024];
+   char buf3[1024];
+   char buf4[1024];
+} tlsflat_t;
+
+struct tlsflat * get_tls();
+
 
 #endif  /* ! _KQUEUE_POSIX_PLATFORM_H */

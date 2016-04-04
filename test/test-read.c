@@ -425,7 +425,17 @@ test_kevent_regular_file(struct test_context *ctx)
 void
 test_evfilt_read(struct test_context *ctx)
 {
-    create_socket_connection(&ctx->client_fd, &ctx->server_fd, ctx->iteration + 23456);
+    unsigned short port = 23456;
+    char * str = getenv("TEST_PORT");
+    if (str) {
+       unsigned short v = atoi(str);
+       printf("port %u is used\n", v);
+       port = v; 
+    }
+    else {
+       printf("TEST_PORT not set using %u\n", port);
+    }
+    create_socket_connection(&ctx->client_fd, &ctx->server_fd, ctx->iteration + port );
 
     test(kevent_socket_add, ctx, "dummy");
     test(kevent_socket_del, ctx, "dummy");

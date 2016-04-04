@@ -36,11 +36,7 @@ CFLAGS_DLL=-q64 \
 -qnosearch -qxplink -qnocsect \
 -DHAVE_CONFIG_H -I$(SRC_DIR) -I$(SRC_DIR)/src/common -I$(SRC_DIR)/include \
 -D_XOPEN_SOURCE=600 \
--D_UNIX03_SOURCE \
--D_UNIX03_THREADS \
--D_XOPEN_SOURCE_EXTENDED=1 \
 -D_UNIX03_WITHDRAWN \
--D__thread= \
 -Dinline= \
 -g -qdll $(MORE_FLAGS) -qexportall -c -M 
 
@@ -49,11 +45,7 @@ CFLAGS_EXE=-q64 \
 -qnosearch -qxplink -qnocsect \
 -DHAVE_CONFIG_H -I$(SRC_DIR) -I$(SRC_DIR)/src/common -I$(SRC_DIR)/include \
 -D_XOPEN_SOURCE=600 \
--D_UNIX03_SOURCE \
--D_UNIX03_THREADS \
--D_XOPEN_SOURCE_EXTENDED=1 \
 -D_UNIX03_WITHDRAWN \
--D__thread= \
 -Dinline= \
 -g -qdll $(MORE_FLAGS) -c -M 
 
@@ -74,7 +66,8 @@ src/zos/user.c \
 src/zos/vnode.c \
 src/zos/signal.c \
 src/zos/timer.c \
-src/zos/posix-kevent.c
+src/zos/posix-kevent.c \
+src/zos/tls.c
 
 CSRC_TEST= \
 test/test-vnode.c \
@@ -127,9 +120,9 @@ libkqueue.dll libkqueue.x: $(DLLOBJS) $(CSRC_DLL) $(ME)
 
 kqtest: $(TESTOBJS) libkqueue.x libkqueue.dll $(ASMOBJS) $(ME)
 	$(LINKEXE) -o kqtest $(TESTOBJS) $(ASMOBJS) libkqueue.x > kqtest.map
+	dbgld -c ./kqtest
 
 runtest: kqtest libkqueue.dll libkqueue.x $(ME)
-	dbgld -c ./kqtest
 	LIBPATH=$(LIBPATH):. ./kqtest
 
 clean:

@@ -32,27 +32,44 @@
 #include <string.h>
 
 #include "private.h"
+#ifdef __MVS__
+#include "../zos/platform.h"
+#endif 
 
 static const char *
 kevent_filter_dump(const struct kevent *kev)
 {
-    static __thread char buf[64];
+#ifndef __MVS__
+    static __thread char tls_buf[64];
+    char * buf = tls_buf;
+    int size = sizeof(tls_buf);
+#else
+    char * buf = get_tls()->buf1;
+    int size = sizeof(((struct tlsflat*)0)->buf1);
+#endif
 
-    snprintf(&buf[0], sizeof(buf), "%d (%s)", 
+    snprintf(buf, size, "%d (%s)", 
             kev->filter, filter_name(kev->filter));
-    return ((const char *) &buf[0]);
+    return ((const char *) buf);
 }
 
 static const char *
 kevent_fflags_dump(const struct kevent *kev)
 {
-    static __thread char buf[1024];
+#ifndef __MVS__
+    static __thread char tls_buf[1024];
+    char * buf = tls_buf;
+    int size = sizeof(tls_buf);
+#else
+    char * buf = get_tls()->buf2;
+    int size = sizeof(((struct tlsflat*)0)->buf2);
+#endif
 
 #define KEVFFL_DUMP(attrib) \
     if (kev->fflags & attrib) \
-    strncat((char *) &buf[0], #attrib" ", 64);
+    strncat(buf, #attrib" ", 64);
 
-    snprintf(buf, sizeof(buf), "fflags=0x%04x (", kev->fflags);
+    snprintf(buf, size, "fflags=0x%04x (", kev->fflags);
     if (kev->filter == EVFILT_VNODE) {
         KEVFFL_DUMP(NOTE_DELETE);
         KEVFFL_DUMP(NOTE_WRITE);
@@ -67,25 +84,32 @@ kevent_fflags_dump(const struct kevent *kev)
         KEVFFL_DUMP(NOTE_FFCOPY);
         KEVFFL_DUMP(NOTE_TRIGGER);
     }  else {
-        strncat((char *) &buf[0], " ", 1);
+        strncat(buf, " ", 1);
     }
     buf[strlen(buf) - 1] = ')';
 
 #undef KEVFFL_DUMP
 
-    return ((const char *) &buf[0]);
+    return ((const char *) buf);
 }
 
 static const char *
 kevent_flags_dump(const struct kevent *kev)
 {
-    static __thread char buf[1024];
+#ifndef __MVS__
+    static __thread char tls_buf[1024];
+    char * buf = tls_buf;
+    int size = sizeof(tls_buf);
+#else
+    char * buf = get_tls()->buf3;
+    int size = sizeof(((struct tlsflat*)0)->buf3);
+#endif
 
 #define KEVFL_DUMP(attrib) \
     if (kev->flags & attrib) \
-	strncat((char *) &buf[0], #attrib" ", 64);
+	strncat(buf, #attrib" ", 64);
 
-    snprintf(buf, sizeof(buf), "flags=0x%04x (", kev->flags);
+    snprintf(buf, size, "flags=0x%04x (", kev->flags);
     KEVFL_DUMP(EV_ADD);
     KEVFL_DUMP(EV_ENABLE);
     KEVFL_DUMP(EV_DISABLE);
@@ -100,7 +124,7 @@ kevent_flags_dump(const struct kevent *kev)
 
 #undef KEVFL_DUMP
 
-    return ((const char *) &buf[0]);
+    return ((const char *) buf);
 }
 
 typedef unsigned int u_int;
@@ -108,9 +132,16 @@ typedef unsigned int u_int;
 const char *
 kevent_dump(const struct kevent *kev)
 {
-    static __thread char buf[1024];
+#ifndef __MVS__
+    static __thread char tls_buf[1024];
+    char * buf = tls_buf;
+    int size = sizeof(tls_buf);
+#else
+    char * buf = get_tls()->buf4;
+    int size = sizeof(((struct tlsflat*)0)->buf4);
+#endif
 
-    snprintf((char *) &buf[0], sizeof(buf), 
+    snprintf(buf, size, 
             "{ ident=%d, filter=%s, %s, %s, data=%d, udata=%p }",
             (u_int) kev->ident,
             kevent_filter_dump(kev),
@@ -119,7 +150,7 @@ kevent_dump(const struct kevent *kev)
             (int) kev->data,
             kev->udata);
 
-    return ((const char *) &buf[0]);
+    return ((const char *) buf);
 }
 
 static int
