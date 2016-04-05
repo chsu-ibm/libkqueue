@@ -45,8 +45,8 @@ __inline long long __zsync_val_compare_and_swap64 (long long * __p, long long  _
    long long initv;
    __asm( " csg %1,%2,%3 \n "
           " stg %1,%0 \n"
-          : "=m"(initv)
-          : "r"(__compVal),"r"(__exchVal), "m"(*__p)
+          : "=m"(initv), "+r"(__compVal)
+          : "r"(__exchVal), "m"(*__p)
           : );
    return initv;
 }
@@ -58,8 +58,8 @@ __inline int __zsync_val_compare_and_swap32 ( int * __p, int __compVal, int __ex
    int initv;
    __asm( " csy %1,%2,%3 \n "
           " st %1,%0 \n"
-          : "=m"(initv)
-          : "r"(__compVal),"r"(__exchVal), "m"(*__p)
+          : "=m"(initv),"+r"(__compVal)
+          : "r"(__exchVal), "m"(*__p)
           : );
    return initv;
 }
