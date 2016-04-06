@@ -27,6 +27,8 @@
 #ifndef __MVS__
 #  error zos only
 #endif
+#include <assert.h>
+
 /*
  * GCC-compatible atomic operations 
 #define atomic_inc(p)   __sync_add_and_fetch((p), 1)
@@ -35,34 +37,33 @@
 #define atomic_ptr_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
 */
 
-#include <stdio.h>
-#include <assert.h>
 __inline long long __zsync_val_compare_and_swap64 (long long * __p, long long  __compVal, long long  __exchVal ) {
    // This function compares the value of __compVal to the value of the variable that __p points to.
    // If they are equal, the value of __exchVal is stored in the address that is specified by __p;
    // otherwise, no operation is performed.
    // Return value The function returns the initial value of the variable that __p points to.
    long long initv;
-   __asm( " csg %1,%2,%3 \n "
+   __asm( " csg %1,%3,%2 \n "
           " stg %1,%0 \n"
-          : "=m"(initv), "+r"(__compVal)
-          : "r"(__exchVal), "m"(*__p)
+          : "=m"(initv), "+r"(__compVal), "+m"(*__p)
+          : "r"(__exchVal)
           : );
    return initv;
 }
 __inline int __zsync_val_compare_and_swap32 ( int * __p, int __compVal, int __exchVal ) {
    // This function compares the value of __compVal to the value of the variable that __p points to.
-   // If they are equal, the value of __exchVal is stored in the address that is specified by __p;
+   // If they are equal, the value of __exchVal is stored in the  address that is specified by __p;
    // otherwise, no operation is performed.
    // Return value The function returns the initial value of the variable that __p points to.
    int initv;
-   __asm( " csy %1,%2,%3 \n "
+   __asm( " cs  %1,%3,%2 \n "
           " st %1,%0 \n"
-          : "=m"(initv),"+r"(__compVal)
-          : "r"(__exchVal), "m"(*__p)
+          : "=m"(initv), "+r"(__compVal), "+m"(*__p)
+          : "r"(__exchVal)
           : );
    return initv;
 }
+
 __inline void __atomic_inc32(int *p) {
    assert(!(((int )p) & 0x00000003)); // boundary alignment required
    assert(0x04 & *(const char *)205); // interlock-access fac 1 present
