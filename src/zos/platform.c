@@ -34,6 +34,52 @@ const struct kqueue_vtable kqops = {
 
 
 int
+zos_get_descriptor_type(struct knote *kn)
+{
+    socklen_t slen;
+    struct stat sb;
+    int i, lsock;
+
+    /*
+     * Test if the descriptor is a socket.
+     */
+    if (fstat(kn->kev.ident, &sb) < 0) {
+        dbg_perror("fstat(2)");
+        return (-1);
+    }
+    if (S_ISREG(sb.st_mode)) {
+        kn->kn_flags |= KNFL_REGULAR_FILE;
+        dbg_printf("fd %d is a regular file\n", (int)kn->kev.ident);
+        return (0);
+    }
+
+    /*
+     * Test if the socket is active or passive.
+     */
+    if (! S_ISSOCK(sb.st_mode))
+        return (0);
+
+    slen = sizeof(lsock);
+    lsock = 0;
+    i = getsockopt(kn->kev.ident, SOL_SOCKET, SO_ACCEPTCONN, (char *) &lsock, &slen);
+    if (i < 0) {
+        switch (errno) {
+            case ENOTSOCK:   /* same as lsock = 0 */
+                return (0);
+                break;
+            default:
+                dbg_perror("getsockopt(3)");
+                return (-1);
+        }
+    } else {
+        if (lsock) 
+            kn->kn_flags |= KNFL_PASSIVE_SOCKET;
+        return (0);
+    }
+}
+
+
+int
 posix_kqueue_init(struct kqueue *kq UNUSED)
 {
     kq->kq_id = open("/dev/null", O_RDONLY); //FIXME

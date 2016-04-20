@@ -108,6 +108,46 @@ posix_kevent_copyout(struct kqueue *kq, int nready,
             eventlist += rv;
             nevents -= rv;
             nready--;
+
+            FD_CLR(filt->kf_pfd, &kq->kq_rfds);
+        }
+    }
+
+    filter_lookup(&filt, kq, EVFILT_READ);
+
+    for (i = 0; i < kq->kq_nfds; i++) {
+        if (FD_ISSET(i, &kq->kq_rfds)) {
+            kn = knote_lookup(filt, i);
+            if (kn == NULL) {
+                dbg_puts("kevent_copyout failed");
+                nret = -1;
+                break;
+            }
+            
+            rv = filt->kf_copyout(eventlist, kn, NULL);
+            if (rv < 0) {
+                dbg_puts("kevent_copyout failed");
+                nret = -1;
+                break;
+            }
+
+            if (eventlist->flags & EV_DISPATCH) {
+                knote_disable(filt, kn);
+            }
+            if (eventlist->flags & EV_ONESHOT) {
+                knote_delete(filt, kn);
+                FD_CLR(i, &kq->kq_fds);
+            }
+            if (eventlist->flags & EV_CLEAR) {
+                FD_CLR(i, &kq->kq_fds);
+            }
+
+            nret += rv;
+            eventlist += rv;
+            nevents -= rv;
+            nready--;
+
+            FD_CLR(i, &kq->kq_rfds);
         }
     }
 
