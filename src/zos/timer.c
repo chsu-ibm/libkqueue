@@ -208,6 +208,9 @@ evfilt_timer_init(struct filter *filt)
     filt->kf_wfd = fd[0];
     filt->kf_pfd = fd[1];
 
+    posix_kqueue_setfd(filt->kf_kqueue, filt->kf_pfd);
+    dbg_printf("evfilt_timer_init fd=%d", filt->kf_pfd);
+
     return (0);
 }
 
@@ -226,7 +229,7 @@ evfilt_timer_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
     ssize_t       cnt;
     struct knote *kn;
 
-    filt = knote_get_filter(src);
+    filt = (struct filter *)ptr;
 
     /* Read the ident */
     cnt = read(filt->kf_pfd, &si, sizeof(si));
@@ -264,15 +267,15 @@ evfilt_timer_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
 
     dst->data = si.counter;
 
-#if DEADWOOD
+//#if DEADWOOD
     if (kn->kev.flags & EV_DISPATCH) {
         KNOTE_DISABLE(kn);
         _timer_delete(kn);
     } else if (kn->kev.flags & EV_ONESHOT) {
         _timer_delete(kn);
-        knote_free(filt, kn);
+        knote_delete(filt, kn);
     } 
-#endif
+//#endif
 
     return (1);
 }

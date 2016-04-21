@@ -22,7 +22,18 @@
 #include "sys/event.h"
 #include "private.h"
 
-const struct filter evfilt_proc = EVFILT_NOTIMPL;
+//const struct filter evfilt_proc = EVFILT_NOTIMPL;
+
+
+void
+posix_kqueue_setfd(struct kqueue *kq, int fd)
+{
+    dbg_printf("setting fd %d", fd);
+
+    FD_SET(fd, &kq->kq_fds);
+    if (kq->kq_nfds <= fd)
+        kq->kq_nfds = fd + 1;
+}
 
 
 int
@@ -98,12 +109,13 @@ posix_kevent_copyout(struct kqueue *kq, int nready,
 
             kn = (struct knote *) NULL; //FIXME we need to retrive a knote from somewhere
 
-            rv = filt->kf_copyout(eventlist, kn, NULL);
+            rv = filt->kf_copyout(eventlist, kn, filt);
             if (rv < 0) {
                 dbg_puts("kevent_copyout failed");
                 nret = -1;
                 break;
             }
+
             nret += rv;
             eventlist += rv;
             nevents -= rv;

@@ -195,7 +195,7 @@ __inline int atomic_dec(int * p) {
  * Additional members of 'struct eventfd'
  */
 #define EVENTFD_PLATFORM_SPECIFIC \
-    int ef_wfd
+    int ef_wfd; int ef_sig
 
 void    posix_kqueue_free(struct kqueue *);
 int     posix_kqueue_init(struct kqueue *);

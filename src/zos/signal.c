@@ -44,7 +44,7 @@ static struct sentry sigtbl[SIGNAL_MAX];
 /* XXX-FIXME this will not work with multiple kqueue objects.
    Need a linked list? Or should signals be delivered to all kqueue objects?
    */
-static struct eventfd * sig_eventfd;
+static struct eventfd * sig_eventfd = NULL;
 
 static void
 signal_handler(int sig)
@@ -60,6 +60,7 @@ signal_handler(int sig)
     }
 #else
     kqops.eventfd_raise(sig_eventfd);
+    sig_eventfd->ef_sig = sig;  //FIXME: holds only a single signal
 #endif
 }
 
@@ -114,9 +115,22 @@ ignore_signal(int sig)
 int
 evfilt_signal_init(struct filter *filt)
 {
-    if (kqops.eventfd_init(&filt->kf_efd) < 0)
-        return (-1);
-    sig_eventfd = &filt->kf_efd; // XXX - does not work w/ multiple kqueues
+    //FIXME - does not work w/ multiple kqueues
+
+    if (sig_eventfd == NULL) {
+        sig_eventfd = malloc(sizeof(struct eventfd));
+
+        if (kqops.eventfd_init(sig_eventfd) < 0)
+            return (-1);
+    }
+
+    filt->kf_efd = *sig_eventfd;
+    filt->kf_pfd = kqops.eventfd_descriptor(&filt->kf_efd);
+
+    posix_kqueue_setfd(filt->kf_kqueue, filt->kf_pfd);
+
+    dbg_printf("evfilt_signal_init fd=%d", filt->kf_pfd);
+
     return (0);
 }
 
@@ -175,6 +189,8 @@ evfilt_signal_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
     struct sentry *s;
     struct knote *kn;
     int sig;
+    struct filter *filt;
+    filt = (struct filter *)ptr;
 
     (void) src;
 
@@ -186,7 +202,7 @@ evfilt_signal_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
     sig = s - &sigtbl[0];
 #else
     kqops.eventfd_lower(sig_eventfd);
-    sig = 1; //XXX-FIXME totally broken, workaround just to compile
+    sig = sig_eventfd->ef_sig; //FIXME totally broken, workaround just to compile
     s = &sigtbl[sig];
 #endif
 
@@ -200,15 +216,15 @@ evfilt_signal_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
     dst->fflags = 0;
     dst->data = 1;  
 
-#if DEADWOOD
+//#if DEADWOOD
     if (kn->kev.flags & EV_DISPATCH) {
         ignore_signal(kn->kev.ident);
         KNOTE_DISABLE(kn);
     } else if (kn->kev.flags & EV_ONESHOT) {
         ignore_signal(kn->kev.ident);
-        knote_free(filt, kn);
+        knote_delete(filt, kn);
     }
-#endif
+//#endif
 
     return (1);
 }
