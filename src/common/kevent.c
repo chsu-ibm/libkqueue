@@ -173,6 +173,12 @@ kevent_copyin_one(struct kqueue *kq, const struct kevent *src)
 
     kn = knote_lookup(filt, src->ident);
     dbg_printf("knote_lookup: ident %d == %p", (int)src->ident, kn);
+
+    if (kn != NULL && src->flags & EV_ADD) {
+        knote_delete(filt, kn);
+        kn = NULL;
+    }
+
     if (kn == NULL) {
         if (src->flags & EV_ADD) {
             if ((kn = knote_new()) == NULL) {

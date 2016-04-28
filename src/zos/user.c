@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include "sys/event.h"
 #include "private.h"
@@ -36,6 +37,8 @@ posix_evfilt_user_init(struct filter *filt)
         return (-1);
 
     filt->kf_pfd = kqops.eventfd_descriptor(&filt->kf_efd);
+
+    posix_kqueue_setfd(filt->kf_kqueue, filt->kf_pfd);
 
     return (0);
 }
@@ -50,6 +53,31 @@ posix_evfilt_user_destroy(struct filter *filt)
 int
 posix_evfilt_user_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
 {
+    struct filter *filt;
+    uintptr_t ident;
+    char buf[1024];
+
+    filt = (struct filter *)ptr;
+
+    /* Reset the counter */
+    dbg_puts("lowering event level");
+    if (read(filt->kf_efd.ef_id, buf, sizeof(buf)) < 0) {
+        /* FIXME: handle EAGAIN and EINTR */
+        /* FIXME: loop so as to consume all data.. may need mutex */
+        dbg_printf("read(2): %s", strerror(errno));
+        return (-1);
+    }
+
+    ident = *((uintptr_t *)buf);
+
+    src = knote_lookup(filt, ident);
+    if (src == NULL) {
+        dbg_puts("knote_lookup failed");
+        return (-1);
+    }
+
+    //kqops.eventfd_lower(&filt->kf_efd);
+
     memcpy(dst, &src->kev, sizeof(*dst));
     struct knote *kn;
     int nevents = 0;
@@ -69,17 +97,20 @@ posix_evfilt_user_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSE
 #endif
     }
 
-    if (src->kev.flags & EV_DISPATCH) 
+    if (src->kev.flags & EV_DISPATCH) {
+        dst->flags &=  ~EV_DISPATCH;
         src->kev.fflags &= ~NOTE_TRIGGER;
+    }
 
-    return (0);
+
+    return (1);
 }
 
 int
 posix_evfilt_user_knote_create(struct filter *filt, struct knote *kn)
 {
 #if TODO
-    u_int ffctrl;
+    unsigned int ffctrl;
 
     //determine if EV_ADD + NOTE_TRIGGER in the same kevent will cause a trigger */
     if ((!(dst->kev.flags & EV_DISABLE)) && src->fflags & NOTE_TRIGGER) {
@@ -88,6 +119,7 @@ posix_evfilt_user_knote_create(struct filter *filt, struct knote *kn)
     }
 
 #endif
+
     return (0);
 }
 
@@ -127,7 +159,14 @@ posix_evfilt_user_knote_modify(struct filter *filt, struct knote *kn,
 #if 0
         knote_enqueue(filt, kn);
 #endif
-        kqops.eventfd_raise(&filt->kf_efd);
+        //kqops.eventfd_raise(&filt->kf_efd);
+
+        dbg_puts("raising event level");
+        if (write(filt->kf_efd.ef_wfd, &kn->kev.ident, sizeof(kn->kev.ident)) < 0) {
+            /* FIXME: handle EAGAIN and EINTR */
+            dbg_printf("write(2) on fd %d: %s", filt->kf_efd.ef_wfd, strerror(errno));
+            return (-1);
+        }
     }
 
     return (0);
@@ -150,6 +189,8 @@ posix_evfilt_user_knote_enable(struct filter *filt, struct knote *kn)
 int
 posix_evfilt_user_knote_disable(struct filter *filt, struct knote *kn)
 {
+    
+
     return (0);
 }
 

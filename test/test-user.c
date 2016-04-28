@@ -75,7 +75,7 @@ test_kevent_user_disable_and_enable(struct test_context *ctx)
 
     test_no_kevents(ctx->kqfd);
 
-    kevent_add(ctx->kqfd, &kev, 1, EVFILT_USER, EV_ADD, 0, 0, NULL); 
+    kevent_add(ctx->kqfd, &kev, 1, EVFILT_USER, EV_ADD | EV_CLEAR, 0, 0, NULL); 
     kevent_add(ctx->kqfd, &kev, 1, EVFILT_USER, EV_DISABLE, 0, 0, NULL); 
 
     /* Trigger the event, but since it is disabled, nothing will happen. */
