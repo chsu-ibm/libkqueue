@@ -43,7 +43,7 @@ posix_kevent_wait(
         const struct timespec *timeout)
 {
     int n, nfds;
-    fd_set rfds;
+    fd_set rfds, wfds;
     struct timespec ts;
     const struct timespec * tsp = timeout;
 
@@ -51,6 +51,7 @@ posix_kevent_wait(
 
     nfds = kq->kq_nfds;
     rfds = kq->kq_fds;
+    wfds = kq->kq_wfds;
 
     dbg_puts("waiting for events");
 
@@ -76,7 +77,7 @@ posix_kevent_wait(
        timeout = &ts;
     }
  
-    n = pselect(nfds, &rfds, NULL , NULL, timeout, NULL);
+    n = pselect(nfds, &rfds, &wfds , NULL, timeout, NULL);
     if (n < 0) {
         if (errno == EINTR) {
             dbg_puts("signal caught");
@@ -87,6 +88,7 @@ posix_kevent_wait(
     }
 
     kq->kq_rfds = rfds;
+    kq->kq_rwfds = wfds;
 
     return (n);
 }
@@ -160,6 +162,44 @@ posix_kevent_copyout(struct kqueue *kq, int nready,
             nready--;
 
             FD_CLR(i, &kq->kq_rfds);
+        }
+    }
+
+    filter_lookup(&filt, kq, EVFILT_WRITE);
+
+    for (i = 0; i < kq->kq_nfds; i++) {
+        if (FD_ISSET(i, &kq->kq_rwfds)) {
+            kn = knote_lookup(filt, i);
+            if (kn == NULL) {
+                dbg_puts("kevent_copyout failed");
+                nret = -1;
+                break;
+            }
+            
+            rv = filt->kf_copyout(eventlist, kn, NULL);
+            if (rv < 0) {
+                dbg_puts("kevent_copyout failed");
+                nret = -1;
+                break;
+            }
+
+            if (eventlist->flags & EV_DISPATCH) {
+                knote_disable(filt, kn);
+            }
+            if (eventlist->flags & EV_ONESHOT) {
+                knote_delete(filt, kn);
+                FD_CLR(i, &kq->kq_wfds);
+            }
+            if (eventlist->flags & EV_CLEAR) {
+                FD_CLR(i, &kq->kq_wfds);
+            }
+
+            nret += rv;
+            eventlist += rv;
+            nevents -= rv;
+            nready--;
+
+            FD_CLR(i, &kq->kq_rwfds);
         }
     }
 

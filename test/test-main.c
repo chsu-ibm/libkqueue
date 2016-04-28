@@ -207,6 +207,7 @@ main(int argc, char **argv)
 {
     struct unit_test tests[MAX_TESTS] = {
         { "socket", 1, test_evfilt_read },
+        { "socket", 1, test_evfilt_write },
 #if !defined(_WIN32) && !defined(__ANDROID__)
         // XXX-FIXME -- BROKEN ON LINUX WHEN RUN IN A SEPARATE THREAD
         { "signal", 1, test_evfilt_signal },

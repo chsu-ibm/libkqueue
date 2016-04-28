@@ -144,7 +144,7 @@ struct filter {
 struct kqueue {
     int             kq_id;
     struct filter   kq_filt[EVFILT_SYSCOUNT];
-    fd_set          kq_fds, kq_rfds; 
+    fd_set          kq_fds, kq_rfds, kq_wfds, kq_rwfds;
     int             kq_nfds;
     tracing_mutex_t kq_mtx;
     volatile uint32_t kq_ref;

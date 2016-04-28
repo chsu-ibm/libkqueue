@@ -27,14 +27,13 @@ get_eof_offset(int fd)
     return (sb.st_size - curpos); //FIXME: can overflow
 }
 
-
 int
 evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
 {
     struct kqueue *kq;
     int fd;
 
-    kq = src->kn_kq;    
+    kq = src->kn_kq;
     fd = (int)src->kev.ident;
 
     /* Special case: for regular files, return the offset from current position to end of file */
@@ -51,7 +50,6 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
         return 1;
     }
     
-
     memcpy(dst, &src->kev, sizeof(*dst));
 
     fprintf(stderr, "evfilt_read_copyout is called. fd=%d\n", fd);

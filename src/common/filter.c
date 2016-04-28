@@ -94,6 +94,10 @@ filter_register_all(struct kqueue *kq)
     int rv;
 
     FD_ZERO(&kq->kq_fds);
+    FD_ZERO(&kq->kq_rfds);
+    FD_ZERO(&kq->kq_wfds);
+    FD_ZERO(&kq->kq_rwfds);
+
     rv = 0;
     rv += filter_register(kq, EVFILT_READ, &evfilt_read);
     rv += filter_register(kq, EVFILT_WRITE, &evfilt_write);

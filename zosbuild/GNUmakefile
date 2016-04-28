@@ -76,6 +76,7 @@ test/test-timer.c \
 test/test-test.c \
 test/test-signal.c \
 test/test-read.c \
+test/test-write.c \
 test/test-proc.c \
 test/test-main.c \
 test/test-kevent.c

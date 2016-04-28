@@ -21,7 +21,7 @@
 /*
  * Create a connected TCP socket.
  */
-static void
+void
 create_socket_connection(int *client, int *server, const short port) 
 { 
     struct sockaddr_in sain;
@@ -63,7 +63,7 @@ create_socket_connection(int *client, int *server, const short port)
     
 }
 
-static void
+void
 kevent_socket_drain(struct test_context *ctx)
 {
     char buf[1];
@@ -73,7 +73,7 @@ kevent_socket_drain(struct test_context *ctx)
         die("recv(2)");
 }
 
-static void
+void
 kevent_socket_fill(struct test_context *ctx)
 {
     if (send(ctx->server_fd, ".", 1, 0) < 1)

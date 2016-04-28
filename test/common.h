@@ -81,6 +81,7 @@ struct test_context {
 };
 
 void test_evfilt_read(struct test_context *);
+void test_evfilt_write(struct test_context *);
 void test_evfilt_signal(struct test_context *);
 void test_evfilt_vnode(struct test_context *);
 void test_evfilt_timer(struct test_context *);

@@ -60,14 +60,16 @@ test_harness(void *arg)
 
     //test_kqueue_conc();
     for (i = 0; i < nrounds; i++) {
-        switch (id % 4) {
+        switch (id % 5) {
             case 0: test_evfilt_user(kqfd);
                     break;
             case 1: test_evfilt_read(kqfd);
                     break;
-            case 2: test_evfilt_timer(kqfd);
+            case 2: test_evfilt_write(kqfd);
                     break;
-            case 3: test_evfilt_vnode(kqfd);
+            case 3: test_evfilt_timer(kqfd);
+                    break;
+            case 4: test_evfilt_vnode(kqfd);
                     break;
         }
         printf("thread %d round %d / %d\n", id, i, nrounds);
