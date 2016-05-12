@@ -1,6 +1,20 @@
 # makefile for zos
 
-all: libkqueue.dll 
+all: libkqueue.dll libkqueue.a
+
+ifndef INSTALL_LOCATION 
+INSTALL_LOCATION=$(HOME)/local/swift
+endif
+
+install: all
+	@bash -c "[[ -d $(INSTALL_LOCATION) ]] || (echo INSTALL_LOCATION $(INSTALL_LOCATION)  not found; false)"
+	@bash -c "[[ -w $(INSTALL_LOCATION) ]] || (echo INSTALL_LOCATION $(INSTALL_LOCATION)  not writ-able ; false)"
+	mkdir -p $(INSTALL_LOCATION)/include/
+	mkdir -p $(INSTALL_LOCATION)/lib
+	cp -r ../include/*   $(INSTALL_LOCATION)/include/
+	cp libkqueue.x $(INSTALL_LOCATION)/lib
+	cp libkqueue.dll $(INSTALL_LOCATION)/lib
+	cp libkqueue.a $(INSTALL_LOCATION)/lib
 
 
 ifndef SRC_DIR
@@ -14,6 +28,8 @@ MORE_FLAGS=
 endif
 
 ME:=$(firstword $(MAKEFILE_LIST))
+
+AR=ar -ruv
 
 CC=/c390/archive/zosdev/latest/xlC -F:clang++
 LINK=/c390/archive/zosdev/latest/xlC -F:clang++ -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,LIST,LP64 -W l,XPLINK
@@ -117,8 +133,9 @@ ceeuopt.o: $(ME)
 	echo "assembling in " $(PWD)
 	$(ASM) $<
 
-libkqueue.dll libkqueue.x: $(DLLOBJS) $(CSRC_DLL) $(ME)
+libkqueue.dll libkqueue.x libkqueue.a: $(DLLOBJS) $(CSRC_DLL) $(ME)
 	$(LINK) -o libkqueue.dll $(DLLOBJS) > libkqueue.map && dbgld libkqueue.dll
+	$(AR) libkqueue.a $(DLLOBJS) >> libkqueue.map
 
 kqtest: $(TESTOBJS) libkqueue.x libkqueue.dll $(ASMOBJS) $(ME)
 	$(LINKEXE) -o kqtest $(TESTOBJS) $(ASMOBJS) libkqueue.x > kqtest.map
