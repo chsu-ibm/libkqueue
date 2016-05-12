@@ -197,6 +197,7 @@ kevent_copyin_one(struct kqueue *kq, const struct kevent *src)
             } 
             knote_insert(filt, kn);
             dbg_printf("created kevent %s", kevent_dump(src));
+            dbg_printf("filt=0x%x, kn=0x%x", filt, kn);
 
 /* XXX- FIXME Needs to be handled in kn_create() to prevent races */
             if (src->flags & EV_DISABLE) {

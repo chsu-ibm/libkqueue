@@ -36,6 +36,7 @@ knote_cmp(struct knote *a, struct knote *b)
 }
 
 RB_GENERATE(knt, knote, kn_entries, knote_cmp)
+RB_GENERATE(evlst, knote, kn_eventlist, knote_cmp)
 
 struct knote *
 knote_new(void)

@@ -94,6 +94,7 @@ struct knote {
     KNOTE_PLATFORM_SPECIFIC;
 #endif
     RB_ENTRY(knote)   kn_entries;
+    RB_ENTRY(knote)   kn_eventlist;
 };
 
 #define KNOTE_ENABLE(ent)           do {                            \
@@ -131,6 +132,7 @@ struct filter {
 
     struct evfilt_data *kf_data;	    /* filter-specific data */
     RB_HEAD(knt, knote) kf_knote;
+    RB_HEAD(evlst, knote) kf_eventlist;
     pthread_rwlock_t    kf_knote_mtx;
     struct kqueue      *kf_kqueue;
 #if defined(FILTER_PLATFORM_SPECIFIC)

@@ -212,6 +212,8 @@ test_evfilt_proc(struct test_context *ctx)
     }
     printf(" -- child created (pid %d)\n", (int) pid);
 
+    kqfd = ctx->kqfd;
+
     test(kevent_proc_add, ctx, "dummy");
     test(kevent_proc_delete, ctx, "dummy");
     test(kevent_proc_get, ctx, "dummy");

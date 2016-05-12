@@ -66,6 +66,7 @@ src/zos/user.c \
 src/zos/vnode.c \
 src/zos/signal.c \
 src/zos/timer.c \
+src/zos/proc.c \
 src/zos/posix-kevent.c \
 src/zos/tls.c
 
