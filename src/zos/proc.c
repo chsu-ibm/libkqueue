@@ -32,8 +32,8 @@
 #include "sys/event.h"
 #include "private.h"
 
-pthread_cond_t   wait_cond = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t  wait_mtx = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t   wait_cond = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t  wait_mtx = PTHREAD_MUTEX_INITIALIZER;
 
 static int wait_thread_running_flag = 0;
 static int wait_thread_dead_flag = 0;
@@ -79,7 +79,11 @@ wait_thread(void *arg)
                 gettimeofday(&tv, NULL);
                 timeout.tv_sec = tv.tv_sec + 1;
                 timeout.tv_nsec = 0;
+#if 0
                 pthread_cond_timedwait(&wait_cond, &wait_mtx, &timeout); //FIXME
+#else
+                pthread_cond_wait(&wait_cond, &wait_mtx);
+#endif                
                 pthread_mutex_unlock(&wait_mtx);
 
                 dbg_puts("awoken from ECHILD-induced sleep");
@@ -175,6 +179,8 @@ posix_evfilt_proc_init(struct filter *filt)
     wait_thread_running_flag = 1;
     wait_thread_dead_flag = 0;
     wait_thread_filt = filt;
+
+    pthread_mutex_unlock(&wait_mtx);
 
     if (pthread_create(&ed->wthr_id, NULL, wait_thread, filt) != 0) 
         goto errout;

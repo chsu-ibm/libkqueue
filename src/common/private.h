@@ -72,7 +72,7 @@ struct eventfd {
 #define KNFL_PASSIVE_SOCKET  (0x01)  /* Socket is in listen(2) mode */
 #define KNFL_REGULAR_FILE    (0x02)  /* File descriptor is a regular file */
 #define KNFL_KNOTE_DELETED   (0x10)  /* The knote object is no longer valid */
- 
+
 struct knote {
     struct kevent     kev;
     int               kn_flags;       
@@ -81,8 +81,15 @@ struct knote {
         int           pfd;       /* Used by timerfd */
         int           events;    /* Used by socket */
         struct {
+#ifdef __MVS__
+            int mqid;
+            char rftok[8];
+            off_t     size;   /* Used by vnode */
+            int mtype;
+#else
             nlink_t   nlink;  /* Used by vnode */
             off_t     size;   /* Used by vnode */
+#endif
         } vnode;
         /* timer_t       timerid;   */
         struct sleepreq *sleepreq; /* Used by posix/timer.c */

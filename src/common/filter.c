@@ -103,7 +103,7 @@ filter_register_all(struct kqueue *kq)
     rv += filter_register(kq, EVFILT_WRITE, &evfilt_write);
     rv += filter_register(kq, EVFILT_SIGNAL, &evfilt_signal);
     rv += filter_register(kq, EVFILT_VNODE, &evfilt_vnode);
-    rv += filter_register(kq, EVFILT_PROC, &evfilt_proc);
+    //rv += filter_register(kq, EVFILT_PROC, &evfilt_proc);
     rv += filter_register(kq, EVFILT_TIMER, &evfilt_timer);
     rv += filter_register(kq, EVFILT_USER, &evfilt_user);
     kq->kq_nfds++;

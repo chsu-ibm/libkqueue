@@ -213,11 +213,11 @@ main(int argc, char **argv)
         //{ "signal", 1, test_evfilt_signal },
 #endif
 //#if FIXME
-        { "proc", 1, test_evfilt_proc },
+        //{ "proc", 1, test_evfilt_proc },
 //#endif
 	//	{ "timer", 1, test_evfilt_timer },
 #ifndef _WIN32
-	//	{ "vnode", 1, test_evfilt_vnode },
+		{ "vnode", 1, test_evfilt_vnode },
 #endif
 #ifdef EVFILT_USER
 //        { "user", 1, test_evfilt_user },
