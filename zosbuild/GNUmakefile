@@ -31,18 +31,6 @@ ME:=$(firstword $(MAKEFILE_LIST))
 
 AR=ar -ruv
 
-CC=/c390/archive/zosdev/latest/xlC -F:clang++
-LINK=/c390/archive/zosdev/latest/xlC -F:clang++ -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,LIST,LP64 -W l,XPLINK
-LINKEXE=/c390/archive/zosdev/latest/xlC -F:clang++ -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,LIST,LP64 -W l,XPLINK
-
-CC=xlc
-LINK=xlC -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,LIST,LP64 -W l,XPLINK
-LINKEXE=xlC -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,LIST,LP64 -W l,XPLINK
-
-CC=/home/jsaad/oss/local/bin/xlc
-LINK=$(CC) -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,LIST,LP64 -W l,XPLINK
-LINKEXE=$(CC) -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,LIST,LP64 -W l,XPLINK
-
 CC=/c390/archive/zosdev/latest/xlc
 LINK=/c390/archive/zosdev/latest/xlc -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,LIST,LP64 -W l,XPLINK
 LINKEXE=/c390/archive/zosdev/latest/xlc -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,LIST,LP64 -W l,XPLINK
@@ -102,7 +90,7 @@ DLLOBJS=$(notdir $(patsubst %.c,%.o,$(CSRC_DLL)))
 
 TESTOBJS=$(notdir $(patsubst %.c,%.o,$(CSRC_TEST)))
 
-ASMOBJS=ceeuopt.o
+ASMOBJS=celqdopt.o
 
 ALLOBJS=$(DLLOBJS) $(TESTOBJS) $(ASMOBJS)
 
@@ -113,15 +101,15 @@ vpath %.h $(SRC_DIR)/ $(SRC_DIR)/src/common/ $(SRC_DIR)/src/zos/ $(SRC_DIR)/test
 vpath %.c $(SRC_DIR)/ $(SRC_DIR)/src/common/ $(SRC_DIR)/src/zos/ $(SRC_DIR)/test/ 
 
 LE_OPTIONS=\
-_CEEUOPT  CSECT \n\
-_CEEUOPT  AMODE ANY \n\
-_CEEUOPT  RMODE ANY \n\
+_CELQDOPT CSECT \n\
+_CELQDOPT AMODE 64 \n\
+_CELQDOPT RMODE ANY \n\
 _         CEEXOPT TEST=(ALL) \n\
 _         DC    C'LE RUNTIME OPTIONS' \n\
 _         DC    C'Bind with application' \n\
 _         END
 
-ceeuopt.o: $(ME)
+celqdopt.o: $(ME)
 	@echo "$(LE_OPTIONS)" | /bin/sed -e "s'^ *_''"  |  /bin/awk '{printf "%-80s\n",$$0}' >  $(patsubst %.o,%.asm,$@)
 	$(ASM) -a $(patsubst %.o,%.asm,$@) > $(patsubst %.o,%.lst,$@)
 
