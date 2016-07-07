@@ -30,6 +30,7 @@
 */
 #include <assert.h>
 
+#ifdef __linux__
 /*
  * GCC-compatible atomic operations 
  */
@@ -37,7 +38,9 @@
 #define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #define atomic_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
 #define atomic_ptr_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
-/*
+
+#else /* not define __linux__ */
+
 __inline long long __zsync_val_compare_and_swap64 (long long * __p, long long  __compVal, long long  __exchVal ) {
    // This function compares the value of __compVal to the value of the variable that __p points to.
    // If they are equal, the value of __exchVal is stored in the address that is specified by __p;
@@ -151,7 +154,8 @@ __inline int atomic_dec(int * p) {
   while (v1 != v0);
   return v0;
 }
-*/
+
+#endif /* __linux__ */
 
 /*
  * GCC-compatible branch prediction macros
