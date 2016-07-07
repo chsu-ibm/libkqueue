@@ -32,9 +32,11 @@
 #include <string.h>
 
 #include "private.h"
-#ifdef __MVS__
+//#ifdef __MVS__
+
 #include "../zos/platform.h"
-#endif 
+
+//#endif 
 
 static const char *
 kevent_filter_dump(const struct kevent *kev)

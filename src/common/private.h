@@ -40,7 +40,7 @@ struct evfilt_data;
 #  include <crtdbg.h>
 # endif
 #elif defined(__linux__)
-# include "../posix/platform.h"
+# include "../zos/platform.h"
 # include "../linux/platform.h"
 #elif defined(__sun)
 # include "../posix/platform.h"

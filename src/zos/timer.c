@@ -48,7 +48,7 @@ struct sleepinfo {
     uintptr_t   counter;        /* number of times the timer expired */
 };
 
-typedef enum { false = 0, true = 1 } bool; 
+//typedef enum { false = 0, true = 1 } bool; 
 
 static void *
 sleeper_thread(void *arg)
