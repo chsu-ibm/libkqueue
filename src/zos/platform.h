@@ -199,6 +199,11 @@ __inline int atomic_dec(int * p) {
 #define EVENTFD_PLATFORM_SPECIFIC \
     int ef_wfd; int ef_sig
 
+/* forward declaration */
+struct kqueue;
+struct eventfd;
+struct knote;
+
 void    posix_kqueue_free(struct kqueue *);
 int     posix_kqueue_init(struct kqueue *);
 
@@ -221,5 +226,8 @@ typedef struct tlsflat {
 
 struct tlsflat * get_tls();
 
+/* z/OS related prototypes */
+int zos_get_descriptor_type(struct knote *kn);
+void posix_kqueue_setfd(struct kqueue *kq, int fd);
 
 #endif  /* ! _KQUEUE_POSIX_PLATFORM_H */
