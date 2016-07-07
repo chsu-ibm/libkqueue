@@ -1,4 +1,11 @@
-UNRELEASED  HEAD
+Unreleased  HEAD
+------------------------------------------------------------------------
+
+  * Fix a build failure on Linux/AArch64 using Ubuntu 16.04.
+    (Credit: Galen Rhodes)
+
+
+2016-02-06  v2.0.4
 ------------------------------------------------------------------------
 
   * Fix incorrect boolean logic in src/linux/read.c
