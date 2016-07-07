@@ -23,19 +23,23 @@
 #define __USE_MISC 1
 
 #include "../../include/sys/event.h"
-
+/*
 #ifndef __MVS__
 #  error zos only
 #endif
+*/
 #include <assert.h>
 
+#ifdef __linux__
 /*
  * GCC-compatible atomic operations 
+ */
 #define atomic_inc(p)   __sync_add_and_fetch((p), 1)
 #define atomic_dec(p)   __sync_sub_and_fetch((p), 1)
 #define atomic_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
 #define atomic_ptr_cas(p, oval, nval) __sync_val_compare_and_swap(p, oval, nval)
-*/
+
+#else /* not define __linux__ */
 
 __inline long long __zsync_val_compare_and_swap64 (long long * __p, long long  __compVal, long long  __exchVal ) {
    // This function compares the value of __compVal to the value of the variable that __p points to.
@@ -65,30 +69,30 @@ __inline int __zsync_val_compare_and_swap32 ( int * __p, int __compVal, int __ex
 }
 
 __inline void __atomic_inc32(int *p) {
-   assert(!(((int )p) & 0x00000003)); // boundary alignment required
-   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   // assert(!(((int )p) & 0x00000003)); // boundary alignment required
+   // assert(0x04 & *(const char *)205); // interlock-access fac 1 present
    __asm( " asi %0,1\n "
           : "=m"(*p)
           : );
    
 }
 __inline void __atomic_inc64(long long *p) {
-   assert(!(((int )p) & 0x00000007)); // boundary alignment required
-   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   // assert(!(((int )p) & 0x00000007)); // boundary alignment required
+   // assert(0x04 & *(const char *)205); // interlock-access fac 1 present
    __asm( " agsi %0,1\n "
           : "=m"(*p)
           : );
 }
 __inline void __atomic_dec32(int *p) {
-   assert(!(((int )p) & 0x00000003)); // boundary alignment required
-   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   // assert(!(((int )p) & 0x00000003)); // boundary alignment required
+   // assert(0x04 & *(const char *)205); // interlock-access fac 1 present
    __asm( " asi %0,-1\n "
           : "=m"(*p)
           : );
 }
 __inline void __atomic_dec64(long long *p) {
-   assert(!(((int )p) & 0x00000007)); // boundary alignment required
-   assert(0x04 & *(const char *)205); // interlock-access fac 1 present
+   // assert(!(((int )p) & 0x00000007)); // boundary alignment required
+   // assert(0x04 & *(const char *)205); // interlock-access fac 1 present
    __asm( " agsi %0,-1\n "
           : "=m"(*p)
           : );
@@ -151,6 +155,8 @@ __inline int atomic_dec(int * p) {
   return v0;
 }
 
+#endif /* __linux__ */
+
 /*
  * GCC-compatible branch prediction macros
  */
@@ -197,6 +203,11 @@ __inline int atomic_dec(int * p) {
 #define EVENTFD_PLATFORM_SPECIFIC \
     int ef_wfd; int ef_sig
 
+/* forward declaration */
+struct kqueue;
+struct eventfd;
+struct knote;
+
 void    posix_kqueue_free(struct kqueue *);
 int     posix_kqueue_init(struct kqueue *);
 
@@ -219,5 +230,8 @@ typedef struct tlsflat {
 
 struct tlsflat * get_tls();
 
+/* z/OS related prototypes */
+int zos_get_descriptor_type(struct knote *kn);
+void posix_kqueue_setfd(struct kqueue *kq, int fd);
 
 #endif  /* ! _KQUEUE_POSIX_PLATFORM_H */

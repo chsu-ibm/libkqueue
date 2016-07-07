@@ -11,3 +11,12 @@ install-sh
 ltmain.sh
 missing
 test-driver
+zosbuild/*.lst
+zosbuild/*.o
+zosbuild/*.dll
+zosbuild/*.a
+zosbuild/*.so
+zosbuild/*.map
+zosbuild/kqtest
+zosbuild/*.asm
+config.h

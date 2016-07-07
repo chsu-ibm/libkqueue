@@ -27,6 +27,7 @@
 #include <unistd.h>
 
 #include "sys/event.h"
+#include "platform.h"
 #include "private.h"
 
 /* Highest signal number supported. POSIX standard signals are < 32 */
@@ -52,7 +53,7 @@ signal_handler(int sig)
     struct sentry *s = &sigtbl[sig];
 
     dbg_printf("caught sig=%d", sig);
-    atomic_inc(&s->s_cnt);
+    atomic_inc((int*)&s->s_cnt);
 #if defined(__sun__)
     if (port_send(s->s_filt->kf_kqueue->kq_port, 
                    X_PORT_SOURCE_SIGNAL, &sigtbl[sig]) < 0) {

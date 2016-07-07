@@ -99,10 +99,10 @@ evfilt_socket_knote_disable(struct filter *filt, struct knote *kn)
     struct kqueue *kq;
     int fd;
 
-    fprintf(stderr, "evfilt_socket_knote_disable is called. fd=%d\n", fd);
-
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
+
+    fprintf(stderr, "evfilt_socket_knote_disable is called. fd=%d\n", fd);
 
     FD_CLR(fd, &kq->kq_wfds);
 

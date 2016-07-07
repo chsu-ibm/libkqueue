@@ -79,8 +79,6 @@ posix_evfilt_user_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSE
     //kqops.eventfd_lower(&filt->kf_efd);
 
     memcpy(dst, &src->kev, sizeof(*dst));
-    struct knote *kn;
-    int nevents = 0;
   
     dst->fflags &= ~NOTE_FFCTRLMASK;     //FIXME: Not sure if needed
     dst->fflags &= ~NOTE_TRIGGER;

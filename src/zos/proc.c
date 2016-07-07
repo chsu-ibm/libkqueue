@@ -63,10 +63,9 @@ wait_thread(void *arg)
         if ((pid = waitpid(-1, &status, 0)) < 0) {
             if (errno == ECHILD) {
                 struct timeval tv;
-                struct timespec timeout;
 
                 dbg_puts("got ECHILD, waiting for wakeup condition");
-                dbg_printf("filt=0x%x", filt);
+                dbg_printf("filt=0x%p", filt);
 
                 pthread_mutex_lock(&wait_mtx);
                 if (wait_thread_dead_flag) {
@@ -77,9 +76,10 @@ wait_thread(void *arg)
                 }
                 
                 gettimeofday(&tv, NULL);
+#if 0
+                struct timespec timeout;
                 timeout.tv_sec = tv.tv_sec + 1;
                 timeout.tv_nsec = 0;
-#if 0
                 pthread_cond_timedwait(&wait_cond, &wait_mtx, &timeout); //FIXME
 #else
                 pthread_cond_wait(&wait_cond, &wait_mtx);
@@ -124,7 +124,7 @@ wait_thread(void *arg)
         /* Scan the wait queue to see if anyone is interested */
         pthread_rwlock_wrlock(&filt->kf_knote_mtx);
         kn = knote_lookup(filt, pid);
-        dbg_printf("filt=0x%x, kn=0x%x", filt, kn);
+        dbg_printf("filt=0x%p, kn=0x%p", filt, kn);
 
         if (kn != NULL) {
             //kn->kev.data = result;
@@ -250,8 +250,6 @@ posix_evfilt_proc_copyin(struct filter *filt,
 int
 posix_evfilt_proc_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
 {
-    struct knote *kn;
-    int nevents = 0;
     struct filter *filt;
     char buf[1024];
     uintptr_t ident;

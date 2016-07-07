@@ -14,9 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#ifdef __IBMC__
 #pragma csect (CODE,   "common#kevent#C")
 #pragma csect (STATIC, "common#kevent#S")
 #pragma csect (TEST,   "common#kevent#T")
+#endif
 
 
 /* To get asprintf(3) */
@@ -32,9 +34,11 @@
 #include <string.h>
 
 #include "private.h"
-#ifdef __MVS__
+//#ifdef __MVS__
+
 #include "../zos/platform.h"
-#endif 
+
+//#endif 
 
 static const char *
 kevent_filter_dump(const struct kevent *kev)
@@ -197,7 +201,7 @@ kevent_copyin_one(struct kqueue *kq, const struct kevent *src)
             } 
             knote_insert(filt, kn);
             dbg_printf("created kevent %s", kevent_dump(src));
-            dbg_printf("filt=0x%x, kn=0x%x", filt, kn);
+            dbg_printf("filt=0x%p, kn=0x%p", filt, kn);
 
 /* XXX- FIXME Needs to be handled in kn_create() to prevent races */
             if (src->flags & EV_DISABLE) {
@@ -296,7 +300,7 @@ kevent(int kqfd, const struct kevent *changelist, int nchanges,
 
 #ifndef NDEBUG
     if (DEBUG_KQUEUE) {
-        myid = atomic_inc(&_kevent_counter);
+        myid = atomic_inc((int *)&_kevent_counter);
         dbg_printf("--- kevent %u --- (nchanges = %d, nevents = %d)", myid, nchanges, nevents);
     }
 #endif

@@ -45,8 +45,6 @@ posix_kevent_wait(
     int n, nfds;
     fd_set rfds, wfds;
     struct timespec ts;
-    const struct timespec * tsp = timeout;
-
     int i ;
 
     nfds = kq->kq_nfds;

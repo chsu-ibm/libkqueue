@@ -206,21 +206,21 @@ int
 main(int argc, char **argv)
 {
     struct unit_test tests[MAX_TESTS] = {
-        //{ "socket", 1, test_evfilt_read },
-        //{ "socket", 1, test_evfilt_write },
+        { "socket", 1, test_evfilt_read },
+        { "socket", 1, test_evfilt_write },
 #if !defined(_WIN32) && !defined(__ANDROID__)
         // XXX-FIXME -- BROKEN ON LINUX WHEN RUN IN A SEPARATE THREAD
-        //{ "signal", 1, test_evfilt_signal },
+        { "signal", 1, test_evfilt_signal },
 #endif
 //#if FIXME
         //{ "proc", 1, test_evfilt_proc },
 //#endif
 	//	{ "timer", 1, test_evfilt_timer },
 #ifndef _WIN32
-		{ "vnode", 1, test_evfilt_vnode },
+//		{ "vnode", 1, test_evfilt_vnode },
 #endif
 #ifdef EVFILT_USER
-//        { "user", 1, test_evfilt_user },
+        { "user", 1, test_evfilt_user },
 #endif
         { NULL, 0, NULL },
     };

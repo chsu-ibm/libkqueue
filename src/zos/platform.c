@@ -16,8 +16,6 @@
 
 #include "../common/private.h"
 
-//const struct filter evfilt_proc = EVFILT_NOTIMPL;
-
 const struct kqueue_vtable kqops = {
     posix_kqueue_init,
     posix_kqueue_free,
