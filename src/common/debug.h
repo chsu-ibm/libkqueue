@@ -36,37 +36,31 @@ extern char *KQUEUE_DEBUG_IDENT;
 #elif defined(_WIN32)
 # define THREAD_ID (int)(GetCurrentThreadId())
 #elif defined(__MVS__)
-
-static inline long long __get_tid() {
-        pthread_t tid = pthread_self();
-        return *(long long *)&tid;
-}
-
-# define THREAD_ID ( __get_tid())
+# define THREAD_ID (*(long*)&pthread_self().__[0])
 #else 
 # error Unsupported platform
 #endif
 
 #ifndef NDEBUG
-#ifdef __MVS__ 
-#define dbg_puts(str)           do {                                \
-    if (DEBUG_KQUEUE)                                              \
-        fprintf(stderr, "%s [%ld]: %s(): %s\n",                      \
-            KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, str); \
-} while (0)
+#ifdef __MVS__
+#define dbg_printf(fmt, ...)                                           \
+    do {                                                               \
+        if (DEBUG_KQUEUE)                                              \
+            fprintf(stderr, "%s [%lx]: [%s()] %s:%zu: " fmt "\n",      \
+                    KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, __FILE__, \
+                    __LINE__, ##__VA_ARGS__);                          \
+    } while (0)
 
-#define dbg_printf(fmt,...)     do {                                \
-    if (DEBUG_KQUEUE)                                              \
-        fprintf(stderr, "%s [%ld]: %s(): "fmt"\n", \
-            KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, __VA_ARGS__);  \
-} while (0)
+#define dbg_puts(str) dbg_printf(str)
 
-#define dbg_perror(str)         do {                                \
-    if (DEBUG_KQUEUE)                                          \
-      fprintf(stderr, "%s [%ld]: %s(): %s: %s (errno=%d)\n",         \
-            KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, str,                \
-            strerror(errno), errno);                              \
-} while (0)
+#define dbg_perror(str)                                                     \
+    do {                                                                    \
+        if (DEBUG_KQUEUE)                                                   \
+            fprintf(stderr, "%s [%lx]: [%s()] %s:%zu: %s: %s (errno=%d)\n", \
+                    KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, __FILE__,      \
+                    __LINE__, str, strerror(errno), errno);                 \
+    } while (0)
+
 #else
 #define dbg_puts(str)           do {                                \
     if (DEBUG_KQUEUE)                                                      \
@@ -88,6 +82,8 @@ static inline long long __get_tid() {
 } while (0)
 #endif
 
+/* use for debugging should be removed later */
+#define dbg_printf2(fmt,...) dbg_printf(fmt, ##__VA_ARGS__)
 # define reset_errno()          do { errno = 0; } while (0)
 
 # if defined(_WIN32)
