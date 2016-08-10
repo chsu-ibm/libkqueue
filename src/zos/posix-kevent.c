@@ -55,6 +55,7 @@ posix_kevent_wait(
 
     for (i = 0; i < nfds; i++) {
         if (FD_ISSET(i, &rfds)) {
+            dbg_printf2("read file descriptor = %d is set", i);
             int ret;
             struct stat info;
             
@@ -85,6 +86,14 @@ posix_kevent_wait(
         return (-1);
     }
 
+    dbg_printf2("pselect returns %d events added", n);
+    for (i = 0; i < nfds; i++) {
+        if (FD_ISSET(i, &rfds))
+            dbg_printf2("read file descriptor = %d is added", i);
+        if (FD_ISSET(i, &wfds))
+            dbg_printf2("write file descriptor = %d is added", i);
+    }
+
     kq->kq_rfds = rfds;
     kq->kq_rwfds = wfds;
 
@@ -101,11 +110,11 @@ posix_kevent_copyout(struct kqueue *kq, int nready,
 
     nret = 0;
     for (i = 0; (i < EVFILT_SYSCOUNT && nready > 0 && nevents > 0); i++) {
-//        dbg_printf("eventlist: n = %d nevents = %d", nready, nevents);
+        dbg_printf("eventlist: n = %d nevents = %d", nready, nevents);
         filt = &kq->kq_filt[i]; 
-//        dbg_printf("pfd[%d] = %d", i, filt->kf_pfd);
+        dbg_printf("pfd[%d] = %d", i, filt->kf_pfd);
         if (FD_ISSET(filt->kf_pfd, &kq->kq_rfds)) {
-            dbg_printf("pending events for filter %d (%s)", filt->kf_id, filter_name(filt->kf_id));
+            dbg_printf("pending events for filter %s", filter_name(filt->kf_id));
 
             kn = (struct knote *) NULL; //FIXME we need to retrive a knote from somewhere
 

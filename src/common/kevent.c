@@ -302,6 +302,11 @@ kevent(int kqfd, const struct kevent *changelist, int nchanges,
     if (DEBUG_KQUEUE) {
         myid = atomic_inc((int *)&_kevent_counter);
         dbg_printf("--- kevent %u --- (nchanges = %d, nevents = %d)", myid, nchanges, nevents);
+        int i;
+        for (i = 0; i != nchanges; ++i)
+            dbg_printf2("%s", kevent_dump(&changelist[i]));
+        for (i = 0; i != nevents; ++i)
+            dbg_printf2("%s", kevent_dump(&eventlist[i]));
     }
 #endif
 
@@ -328,6 +333,8 @@ kevent(int kqfd, const struct kevent *changelist, int nchanges,
      */
     if (nevents > MAX_KEVENT)
         nevents = MAX_KEVENT;
+
+    dbg_printf2("nevents = %d", nevents);
     if (nevents > 0) {
         rv = kqops.kevent_wait(kq, nevents, timeout);
         dbg_printf("kqops.kevent_wait returned %d", rv);

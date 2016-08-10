@@ -121,7 +121,7 @@ knote_lookup(struct filter *filt, uintptr_t ident)
     ent = RB_FIND(knt, &filt->kf_knote, &query);
     pthread_rwlock_unlock(&filt->kf_knote_mtx);
 
-    dbg_printf("id=%" PRIuPTR " ent=%p", ident, ent);
+    dbg_printf2("id=%" PRIuPTR " ent=0x%p", ident, ent);
 
     return (ent);
 }

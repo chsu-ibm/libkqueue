@@ -22,7 +22,7 @@ SRC_DIR=..
 endif
 
 ifdef DEBUG
-MORE_FLAGS=-DDEBUG=1
+MORE_FLAGS=-DDEBUG=1 -UNDEBUG
 else
 MORE_FLAGS=
 endif
@@ -124,6 +124,7 @@ celqdopt.o: $(ME)
 libkqueue.dll libkqueue.x libkqueue.a: $(DLLOBJS) $(CSRC_DLL) $(ME)
 	$(LINK) -o libkqueue.dll $(DLLOBJS) > libkqueue.map && dbgld libkqueue.dll
 	$(AR) libkqueue.a $(DLLOBJS) >> libkqueue.map
+	dbgld $@
 
 kqtest: $(TESTOBJS) libkqueue.x libkqueue.dll $(ASMOBJS) $(ME)
 	$(LINKEXE) -o kqtest $(TESTOBJS) $(ASMOBJS) libkqueue.x > kqtest.map
