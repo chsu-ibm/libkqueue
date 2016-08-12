@@ -20,6 +20,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include "../common/queue.h"
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -30,100 +31,76 @@
 #include "sys/event.h"
 #include "private.h"
 
-int
-posix_evfilt_user_init(struct filter *filt)
+/* close pipefd if exist and reset pipefd to -1 */
+static void
+reset_pipe(int *pipefd)
 {
-    if (kqops.eventfd_init(&filt->kf_efd) < 0)
-        return (-1);
-
-    filt->kf_pfd = kqops.eventfd_descriptor(&filt->kf_efd);
-
-    posix_kqueue_setfd(filt->kf_kqueue, filt->kf_pfd);
-
-    return (0);
-}
-
-void
-posix_evfilt_user_destroy(struct filter *filt)
-{
-    kqops.eventfd_close(&filt->kf_efd);
-    return;
+    dbg_printf("reset_pipe, pipefd[0] = %d, pipefd[1] = %d",
+               pipefd[0], pipefd[1]);
+    if (pipefd[0] != -1) close(pipefd[0]);
+    if (pipefd[1] != -1) close(pipefd[1]);
+    pipefd[0] = pipefd[1] = -1;
 }
 
 int
-posix_evfilt_user_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
+posix_evfilt_user_copyout(struct kevent *dst,
+                          struct knote *src,
+                          void *ptr UNUSED)
 {
-    struct filter *filt;
-    uintptr_t ident;
-    char buf[1024];
-
-    filt = (struct filter *)ptr;
-
-    /* Reset the counter */
-    dbg_puts("lowering event level");
-    if (read(filt->kf_efd.ef_id, buf, sizeof(buf)) < 0) {
-        /* FIXME: handle EAGAIN and EINTR */
-        /* FIXME: loop so as to consume all data.. may need mutex */
-        dbg_printf("read(2): %s", strerror(errno));
-        return (-1);
-    }
-
-    ident = *((uintptr_t *)buf);
-
-    src = knote_lookup(filt, ident);
-    if (src == NULL) {
-        dbg_puts("knote_lookup failed");
-        return (-1);
-    }
-
-    //kqops.eventfd_lower(&filt->kf_efd);
-
+    assert(src != NULL);
     memcpy(dst, &src->kev, sizeof(*dst));
-  
-    dst->fflags &= ~NOTE_FFCTRLMASK;     //FIXME: Not sure if needed
+    dst->fflags &= ~NOTE_FFCTRLMASK;  // FIXME: Not sure if needed
     dst->fflags &= ~NOTE_TRIGGER;
     if (src->kev.flags & EV_ADD) {
         /* NOTE: True on FreeBSD but not consistent behavior with
                   other filters. */
         dst->flags &= ~EV_ADD;
     }
-    if (src->kev.flags & EV_CLEAR)
-        src->kev.fflags &= ~NOTE_TRIGGER;
+    if (src->kev.flags & EV_CLEAR) src->kev.fflags &= ~NOTE_TRIGGER;
     if (src->kev.flags & (EV_DISPATCH | EV_CLEAR | EV_ONESHOT)) {
-#if 0
-        kqops.eventfd_raise(&src->kdata.kn_eventfd);
-#endif
+        dbg_puts("read out anonymous pipe");
+        char buf[1024];
+        if (read(src->kdata.kn_eventfd[0], buf, sizeof(buf)) < 0) {
+            /* pipe_read_fd is in blocking mode so there is no EAGAIN */
+            /* should we consider interrupt EINTR ? */
+            dbg_printf("read(2): %s", strerror(errno));
+            return -1;
+        }
     }
 
-    if (src->kev.flags & EV_DISPATCH) {
-        dst->flags &=  ~EV_DISPATCH;
-        src->kev.fflags &= ~NOTE_TRIGGER;
-    }
+    if (src->kev.flags & EV_DISPATCH) src->kev.fflags &= ~NOTE_TRIGGER;
 
-
+    /* indicate copyout one event */
     return (1);
 }
 
 int
 posix_evfilt_user_knote_create(struct filter *filt, struct knote *kn)
 {
-#if TODO
-    unsigned int ffctrl;
+    int *pipefd = &kn->kdata.kn_eventfd[0];
 
-    //determine if EV_ADD + NOTE_TRIGGER in the same kevent will cause a trigger */
-    if ((!(dst->kev.flags & EV_DISABLE)) && src->fflags & NOTE_TRIGGER) {
-        dst->kev.fflags |= NOTE_TRIGGER;
-        eventfd_raise(filt->kf_pfd);
+    /* create a pipe and set the write end in non-blocking mode */
+    if (pipe(pipefd) == -1) {
+        dbg_perror("eventfd");
+        return -1;
     }
 
-#endif
+    if (fcntl(pipefd[1], F_SETFL, O_NONBLOCK) == -1) {
+        reset_pipe(pipefd);
+        dbg_perror("fcntl(F_SETFL)");
+        return -1;
+    }
 
-    return (0);
+    dbg_printf("pipefd[0] = %d, pipefd[1] = %d",
+               pipefd[0], pipefd[1]);
+    /* add the read end of pipe to kqueue's waiting fd list */
+    posix_kqueue_setfd(filt->kf_kqueue, pipefd[0]);
+    return 0;
 }
 
 int
-posix_evfilt_user_knote_modify(struct filter *filt, struct knote *kn, 
-        const struct kevent *kev)
+posix_evfilt_user_knote_modify(struct filter *filt, struct knote *kn,
+                               const struct kevent *kev)
 {
     unsigned int ffctrl;
     unsigned int fflags;
@@ -132,70 +109,54 @@ posix_evfilt_user_knote_modify(struct filter *filt, struct knote *kn,
     ffctrl = kev->fflags & NOTE_FFCTRLMASK;
     fflags = kev->fflags & NOTE_FFLAGSMASK;
     switch (ffctrl) {
-        case NOTE_FFNOP:
-            break;
-
-        case NOTE_FFAND:
-            kn->kev.fflags &= fflags;
-            break;
-
-        case NOTE_FFOR:
-            kn->kev.fflags |= fflags;
-            break;
-
-        case NOTE_FFCOPY:
-            kn->kev.fflags = fflags;
-            break;
-
-        default:
-            /* XXX Return error? */
-            break;
+        case NOTE_FFAND: kn->kev.fflags &= fflags; break;
+        case NOTE_FFOR: kn->kev.fflags |= fflags; break;
+        case NOTE_FFCOPY: kn->kev.fflags = fflags; break;
+        case NOTE_FFNOP: /* do nothing */ break;
+        default: /* FIXME: should report error? */ break;
     }
 
+    /* if trigger and not disabled */
     if ((!(kn->kev.flags & EV_DISABLE)) && kev->fflags & NOTE_TRIGGER) {
+        dbg_printf("trigger user event: knote = 0x%p", kn);
         kn->kev.fflags |= NOTE_TRIGGER;
-#if 0
-        knote_enqueue(filt, kn);
-#endif
-        //kqops.eventfd_raise(&filt->kf_efd);
-
-        dbg_puts("raising event level");
-        if (write(filt->kf_efd.ef_wfd, &kn->kev.ident, sizeof(kn->kev.ident)) < 0) {
-            /* FIXME: handle EAGAIN and EINTR */
-            dbg_printf("write(2) on fd %d: %s", filt->kf_efd.ef_wfd, strerror(errno));
-            return (-1);
+        if (write(kn->kdata.kn_eventfd[1], ".", 1) == -1 && errno != EAGAIN) {
+            /* EAGAIN is not considered as error */
+            dbg_printf("write(2) on fd %d: %s", kn->kdata.kn_eventfd[1],
+                       strerror(errno));
+            return -1;
         }
     }
-
-    return (0);
+    return 0;
 }
 
 int
 posix_evfilt_user_knote_delete(struct filter *filt, struct knote *kn)
 {
+    dbg_printf("filt %p kn %p", filt, kn);
+    reset_pipe(&kn->kdata.kn_eventfd[0]);
     return (0);
 }
 
 int
 posix_evfilt_user_knote_enable(struct filter *filt, struct knote *kn)
 {
-    /* FIXME: what happens if NOTE_TRIGGER is in fflags?
-       should the event fire? */
-    return (0);
+    dbg_printf("filt %p kn %p", filt, kn);
+    reset_pipe(&kn->kdata.kn_eventfd[0]);
+    return posix_evfilt_user_knote_create(filt, kn);
 }
 
 int
 posix_evfilt_user_knote_disable(struct filter *filt, struct knote *kn)
 {
-    
-
-    return (0);
+    dbg_printf("filt %p kn %p", filt, kn);
+    return posix_evfilt_user_knote_delete(filt, kn);
 }
 
 const struct filter evfilt_user = {
     EVFILT_USER,
-    posix_evfilt_user_init,
-    posix_evfilt_user_destroy,
+    NULL,
+    NULL,
     posix_evfilt_user_copyout,
     posix_evfilt_user_knote_create,
     posix_evfilt_user_knote_modify,

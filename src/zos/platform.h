@@ -203,6 +203,11 @@ __inline int atomic_dec(int * p) {
 #define EVENTFD_PLATFORM_SPECIFIC \
     int ef_wfd; int ef_sig
 
+#define KNOTE_PLATFORM_SPECIFIC \
+    union {                     \
+        int kn_eventfd[2];      \
+    } kdata
+
 /* forward declaration */
 struct kqueue;
 struct eventfd;

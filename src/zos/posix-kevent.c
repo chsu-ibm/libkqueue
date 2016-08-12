@@ -35,46 +35,21 @@ posix_kqueue_setfd(struct kqueue *kq, int fd)
         kq->kq_nfds = fd + 1;
 }
 
-
 int
-posix_kevent_wait(
-        struct kqueue *kq, 
-        int nevents,
-        const struct timespec *timeout)
+posix_kevent_wait(struct kqueue *kq,
+                  int nevents,
+                  const struct timespec *timeout)
 {
     int n, nfds;
     fd_set rfds, wfds;
     struct timespec ts;
     int i ;
 
+    dbg_puts("waiting for events");
+
     nfds = kq->kq_nfds;
     rfds = kq->kq_fds;
     wfds = kq->kq_wfds;
-
-    dbg_puts("waiting for events");
-
-    for (i = 0; i < nfds; i++) {
-        if (FD_ISSET(i, &rfds)) {
-            dbg_printf2("read file descriptor = %d is set", i);
-            int ret;
-            struct stat info;
-            
-            ret = fstat(i, &info);
-            if (ret < 0) {
-                perror ("fstat");
-                fprintf(stderr, "fd=%d is NOT a valid file descriptor\n", i);
-            } else {
-                fprintf(stderr, "fd=%d is a valid file descriptor\n", i);
-            }
-        }
-    }
-
-
-    if (timeout == NULL) {
-       ts.tv_sec  = 2592000;
-       ts.tv_nsec = 0;
-       timeout = &ts;
-    }
  
     n = pselect(nfds, &rfds, &wfds , NULL, timeout, NULL);
     if (n < 0) {

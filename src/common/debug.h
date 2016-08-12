@@ -41,6 +41,15 @@ extern char *KQUEUE_DEBUG_IDENT;
 # error Unsupported platform
 #endif
 
+#define KQ_ABORT(fmt, ...)                                                   \
+    do {                                                                     \
+        fprintf(stderr,                                                      \
+                "libkqueue internal error in thread %lx at [%s()] %s:%zu\n", \
+                THREAD_ID, __func__, __FILE__, __LINE__);                    \
+        fprintf(stderr, "Abort Message: " fmt "\n", ##__VA_ARGS__);          \
+        abort();                                                             \
+    } while (0)
+
 #ifndef NDEBUG
 #ifdef __MVS__
 #define dbg_printf(fmt, ...)                                           \
