@@ -44,15 +44,20 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
         if (dst->data == 0) {
             dst->filter = 0;    /* Will cause the kevent to be discarded */
             FD_CLR(fd, &kq->kq_fds);
-            return 0;
         }
     
-        return 1;
+        return 0;
+    } else if (src->kn_flags & KNFL_CHAR_DEVICE) {
+        memcpy(dst, &src->kev, sizeof(*dst));
+        struct stat sb;
+        fstat(src->kev.ident, &sb);
+        dst->data = sb.st_blksize;
+        return 0;
     }
     
     memcpy(dst, &src->kev, sizeof(*dst));
 
-    fprintf(stderr, "evfilt_read_copyout is called. fd=%d\n", fd);
+    dbg_printf("evfilt_read_copyout is called. fd=%d\n", fd);
 
     if (src->kn_flags & KNFL_PASSIVE_SOCKET) {
         /* On return, data contains the length of the 
@@ -82,22 +87,13 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
 int
 evfilt_read_knote_create(struct filter *filt, struct knote *kn)
 {
-    struct kqueue *kq;
-    int fd;
-
-    kq = kn->kn_kq;    
-    fd = (int)kn->kev.ident;
-
-    fprintf(stderr, "evfilt_read_knote_create(struct filter *filt, struct knote *kn) called\n");
-    fprintf(stderr, "  fd=%d\n", fd);
+    dbg_printf("filt = %p, kn = %p, fd = %d", filt, kn, kn->kev.ident);
 
     if (zos_get_descriptor_type(kn) < 0)
         return (-1);
 
-    FD_SET(fd, &kq->kq_fds);
-    if (kq->kq_nfds <= fd)
-        kq->kq_nfds = fd + 1;
-    
+    posix_kqueue_setfd(filt->kf_kqueue, kn->kev.ident);
+
     return 0;
 }
 

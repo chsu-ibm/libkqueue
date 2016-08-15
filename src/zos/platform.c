@@ -30,7 +30,6 @@ const struct kqueue_vtable kqops = {
     posix_eventfd_descriptor
 };
 
-
 int
 zos_get_descriptor_type(struct knote *kn)
 {
@@ -45,17 +44,25 @@ zos_get_descriptor_type(struct knote *kn)
         dbg_perror("fstat(2)");
         return (-1);
     }
+
     if (S_ISREG(sb.st_mode)) {
         kn->kn_flags |= KNFL_REGULAR_FILE;
         dbg_printf("fd %d is a regular file\n", (int)kn->kev.ident);
         return (0);
     }
 
+    if (S_ISCHR(sb.st_mode)) {
+        kn->kn_flags |= KNFL_CHAR_DEVICE;
+        dbg_printf("fd %d is a character device\n", (int)kn->kev.ident);
+        return (0);
+    }
+
     /*
      * Test if the socket is active or passive.
      */
-    if (! S_ISSOCK(sb.st_mode))
-        return (0);
+    if (! S_ISSOCK(sb.st_mode)) {
+        KQ_ABORT("fd %d is neither a regular file nor a socket", kn->kev.ident);
+    }
 
     slen = sizeof(lsock);
     lsock = 0;
