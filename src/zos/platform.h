@@ -231,6 +231,8 @@ typedef struct tlsflat {
    char buf2[1024];
    char buf3[1024];
    char buf4[1024];
+   fd_set rfds;
+   fd_set wfds;
 } tlsflat_t;
 
 struct tlsflat * get_tls();
