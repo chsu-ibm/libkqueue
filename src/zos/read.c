@@ -161,9 +161,16 @@ evfilt_read_knote_disable(struct filter *filt, struct knote *kn)
     return 0;
 }
 
+int
+evfilt_read_init(struct filter *filt)
+{
+    filt->fd_to_ident = default_fd_to_ident;
+    return 0;
+}
+
 const struct filter evfilt_read = {
     EVFILT_READ,
-    NULL,
+    evfilt_read_init,
     NULL,
     evfilt_read_copyout,
     evfilt_read_knote_create,

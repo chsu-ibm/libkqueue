@@ -87,7 +87,7 @@ libkqueue_init(void)
     }
 #endif
 
-   kqmap = map_new(get_fd_limit()); 
+   kqmap = map_new(get_fd_limit());
    if (kqmap == NULL)
        abort(); 
    if (knote_init() < 0)

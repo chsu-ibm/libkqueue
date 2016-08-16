@@ -22,7 +22,7 @@ static int new_kq_id(void)
 {
     static int ID = 0;
     /* should only call once */
-    if (slowpath(MAX_ID < 0)) {
+    if (slowpath(MAX_FILE_DESCRIPTORS < 0)) {
         struct rlimit rlim;
         if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
             MAX_FILE_DESCRIPTORS = rlim.rlim_max;
@@ -32,8 +32,8 @@ static int new_kq_id(void)
         }
     }
 
-    /* ID is monotonically and atomically increased and the MAX_ID is equal to
-     * the maximum number of file descriptors */
+    /* ID is monotonically and atomically increased and the MAX_FILE_DESCRIPTORS
+     * is the maximum number of file descriptors */
 
     return atomic_inc(&ID) % MAX_FILE_DESCRIPTORS;
 }
@@ -183,4 +183,10 @@ int
 posix_eventfd_descriptor(struct eventfd *e)
 {
     return (e->ef_id);
+}
+
+uintptr_t
+default_fd_to_ident(struct filter *filt, int fd)
+{
+    return (uintptr_t)fd;
 }

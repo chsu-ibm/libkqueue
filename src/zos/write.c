@@ -109,9 +109,16 @@ evfilt_socket_knote_disable(struct filter *filt, struct knote *kn)
     return 0;
 }
 
+int
+evfilt_socket_init(struct filter *filt)
+{
+    filt->fd_to_ident = default_fd_to_ident;
+    return 0;
+}
+
 const struct filter evfilt_write = {
     EVFILT_WRITE,
-    NULL,
+    evfilt_socket_init,
     NULL,
     evfilt_socket_copyout,
     evfilt_socket_knote_create,

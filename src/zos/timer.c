@@ -195,6 +195,8 @@ evfilt_timer_init(struct filter *filt)
 {
     int fd[2];
 
+    filt->fd_to_ident = default_fd_to_ident;
+
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
         dbg_perror("socketpair(3)");
         return (-1);

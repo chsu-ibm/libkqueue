@@ -118,6 +118,8 @@ evfilt_signal_init(struct filter *filt)
 {
     //FIXME - does not work w/ multiple kqueues
 
+    filt->fd_to_ident = default_fd_to_ident;
+
     if (sig_eventfd == NULL) {
         sig_eventfd = malloc(sizeof(struct eventfd));
 

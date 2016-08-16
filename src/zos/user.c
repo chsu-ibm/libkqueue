@@ -31,15 +31,59 @@
 #include "sys/event.h"
 #include "private.h"
 
+static uintptr_t INVALID_IDENT = (uintptr_t)0xABABABABABABABABULL;
 /* close pipefd if exist and reset pipefd to -1 */
 static void
-reset_pipe(int *pipefd)
+reset_pipe(struct filter *filt, int *pipefd)
 {
-    dbg_printf("reset_pipe, pipefd[0] = %d, pipefd[1] = %d",
-               pipefd[0], pipefd[1]);
-    if (pipefd[0] != -1) close(pipefd[0]);
-    if (pipefd[1] != -1) close(pipefd[1]);
+    int read_fd = pipefd[0];
+    int write_fd = pipefd[1];
+    if (read_fd != -1) {
+        filt->fd_map[read_fd] = INVALID_IDENT;
+        close(read_fd);
+    }
+    if (write_fd != -1) close(write_fd);
+
     pipefd[0] = pipefd[1] = -1;
+}
+
+static void
+setfd(struct filter *filt, int fd, int ident)
+{
+    posix_kqueue_setfd(filt->kf_kqueue, fd);
+    dbg_printf("filt->fd_map[%d] = %lu", fd, filt->fd_map[fd]);
+    assert(filt->fd_map[fd] == INVALID_IDENT);
+    filt->fd_map[fd] = ident;
+}
+
+static uintptr_t
+user_fd_to_ident(struct filter *filt, int fd)
+{
+    uintptr_t ident = filt->fd_map[fd];
+    assert(ident != INVALID_IDENT);
+    dbg_printf("fd -> ident: %d -> %lu", fd, ident);
+    return ident;
+}
+
+int
+posix_evfilt_user_init(struct filter *filt)
+{
+    filt->fd_to_ident = user_fd_to_ident;
+
+    /* create fd_map and initialize it to 0xff */
+    size_t size = MAX_FILE_DESCRIPTORS * sizeof(uintptr_t);
+    filt->fd_map = malloc(size);
+    memset(filt->fd_map, INVALID_IDENT, size);
+    return 0;
+}
+
+void
+posix_evfilt_user_destroy(struct filter *filt)
+{
+    if (filt->fd_map) {
+        free(filt->fd_map);
+        filt->fd_map = NULL;
+    }
 }
 
 int
@@ -71,7 +115,7 @@ posix_evfilt_user_copyout(struct kevent *dst,
     if (src->kev.flags & EV_DISPATCH) src->kev.fflags &= ~NOTE_TRIGGER;
 
     /* indicate copyout one event */
-    return (1);
+    return (0);
 }
 
 int
@@ -86,7 +130,7 @@ posix_evfilt_user_knote_create(struct filter *filt, struct knote *kn)
     }
 
     if (fcntl(pipefd[1], F_SETFL, O_NONBLOCK) == -1) {
-        reset_pipe(pipefd);
+        reset_pipe(filt, pipefd);
         dbg_perror("fcntl(F_SETFL)");
         return -1;
     }
@@ -94,7 +138,7 @@ posix_evfilt_user_knote_create(struct filter *filt, struct knote *kn)
     dbg_printf("pipefd[0] = %d, pipefd[1] = %d",
                pipefd[0], pipefd[1]);
     /* add the read end of pipe to kqueue's waiting fd list */
-    posix_kqueue_setfd(filt->kf_kqueue, pipefd[0]);
+    setfd(filt, pipefd[0], kn->kev.ident);
     return 0;
 }
 
@@ -134,7 +178,7 @@ int
 posix_evfilt_user_knote_delete(struct filter *filt, struct knote *kn)
 {
     dbg_printf("filt %p kn %p", filt, kn);
-    reset_pipe(&kn->kdata.kn_eventfd[0]);
+    reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return (0);
 }
 
@@ -142,7 +186,7 @@ int
 posix_evfilt_user_knote_enable(struct filter *filt, struct knote *kn)
 {
     dbg_printf("filt %p kn %p", filt, kn);
-    reset_pipe(&kn->kdata.kn_eventfd[0]);
+    reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return posix_evfilt_user_knote_create(filt, kn);
 }
 
@@ -155,8 +199,8 @@ posix_evfilt_user_knote_disable(struct filter *filt, struct knote *kn)
 
 const struct filter evfilt_user = {
     EVFILT_USER,
-    NULL,
-    NULL,
+    posix_evfilt_user_init,
+    posix_evfilt_user_destroy,
     posix_evfilt_user_copyout,
     posix_evfilt_user_knote_create,
     posix_evfilt_user_knote_modify,

@@ -93,7 +93,7 @@ posix_kevent_copyout(struct kqueue *kq,
     for (i = 0; i < EVFILT_SYSCOUNT && remain; ++i) {
         fd_set *fds = (~i == (EVFILT_WRITE)) ? &wfds : &rfds;
         struct filter *filt = &kq->kq_filt[i];
-        if (!filt) {
+        if (!filt || filt->kf_id == 0) {
             dbg_printf2("filt %d is not implemented", i);
             continue;
         }
@@ -121,14 +121,19 @@ process(struct kevent *eventlist,
     int fd;
 
     nret = 0;
+    dbg_printf("filt = %d", filt->kf_id);
     for (fd = 0; fd < nfds && nret < remain; ++fd) {
         if (!FD_ISSET(fd, fds)) continue;
 
-        uintptr_t ident = filter_fd_to_identity(filt, fd);
+        uintptr_t ident = filt->fd_to_ident(filt, fd);
+        dbg_printf("filt = %d, fd -> ident = %d -> %lu", filt->kf_id, fd,
+                   ident);
         /* FIXME: this operation is very expensive, try to avoid it */
-        struct knote *kn = knote_lookup(filt, fd);
-        if (!kn) continue;
+        struct knote *kn = knote_lookup(filt, ident);
+        dbg_printf("knote_lookup(0x%p, %lu) = 0x%p", filt, ident, kn);
+        if (kn == NULL) continue;
 
+        dbg_printf("before kf_copyout");
         int rv = filt->kf_copyout(eventlist, kn, filt);
         if (slowpath(rv < 0)) {
             dbg_puts("knote_copyout failed");
@@ -149,5 +154,6 @@ process(struct kevent *eventlist,
             dbg_puts("spurious wakeup, discarding event");
         }
     }
+    dbg_printf("filt = %d", filt->kf_id);
     return nret;
 }

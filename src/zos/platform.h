@@ -208,6 +208,14 @@ __inline int atomic_dec(int * p) {
         int kn_eventfd[2];      \
     } kdata
 
+struct filter;
+uintptr_t default_fd_to_ident(struct filter *filt, int fd);
+
+/* fd_map is for user filter to convert fd to ident */
+#define FILTER_PLATFORM_SPECIFIC                  \
+    uintptr_t (*fd_to_ident)(struct filter *, int); \
+    uintptr_t *fd_map
+
 /* forward declaration */
 struct kqueue;
 struct eventfd;

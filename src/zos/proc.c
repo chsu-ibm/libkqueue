@@ -159,6 +159,8 @@ posix_evfilt_proc_init(struct filter *filt)
 {
     struct evfilt_data *ed;
 
+    filt->fd_to_ident = default_fd_to_ident;
+
     if (kqops.eventfd_init(&filt->kf_efd) < 0)
         return (-1);
 

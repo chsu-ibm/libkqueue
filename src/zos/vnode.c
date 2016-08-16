@@ -122,13 +122,11 @@ int
 evfilt_vnode_init(struct filter *filt)
 {
     struct evfilt_data *ed;
-    int ret;
+
+    filt->fd_to_ident = default_fd_to_ident;
 
     if (kqops.eventfd_init(&filt->kf_efd) < 0)
         return (-1);
-
-    ret = 
-
 
     vnode_msgq_id = msgget(VNODE_MSGQ_KEY, IPC_CREAT | 0600);
     if (vnode_msgq_id < 0) {
