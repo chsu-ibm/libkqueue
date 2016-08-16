@@ -16,6 +16,28 @@
 
 #include "../common/private.h"
 
+int MAX_FILE_DESCRIPTORS = -1;
+
+static int new_kq_id(void)
+{
+    static int ID = 0;
+    /* should only call once */
+    if (slowpath(MAX_ID < 0)) {
+        struct rlimit rlim;
+        if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
+            MAX_FILE_DESCRIPTORS = rlim.rlim_max;
+        } else {
+            dbg_perror("getrlimit(2)");
+            MAX_FILE_DESCRIPTORS = 65536;;
+        }
+    }
+
+    /* ID is monotonically and atomically increased and the MAX_ID is equal to
+     * the maximum number of file descriptors */
+
+    return atomic_inc(&ID) % MAX_FILE_DESCRIPTORS;
+}
+
 const struct kqueue_vtable kqops = {
     posix_kqueue_init,
     posix_kqueue_free,
@@ -85,25 +107,20 @@ zos_get_descriptor_type(struct knote *kn)
 
 
 int
-posix_kqueue_init(struct kqueue *kq UNUSED)
+posix_kqueue_init(struct kqueue *kq)
 {
-    kq->kq_id = open("/dev/null", O_RDONLY); //FIXME
-    if (kq->kq_id < 0) {
-        dbg_perror("FIXME ");
-        return (-1);
-    }
-
+    kq->kq_id = new_kq_id();
     if (filter_register_all(kq) < 0) {
         close(kq->kq_id);
         return (-1);
     }
-
     return (0);
 }
 
 void
 posix_kqueue_free(struct kqueue *kq UNUSED)
 {
+    abort();
 }
 
 int

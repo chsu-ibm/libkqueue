@@ -240,5 +240,6 @@ struct tlsflat * get_tls();
 /* z/OS related prototypes */
 int zos_get_descriptor_type(struct knote *kn);
 void posix_kqueue_setfd(struct kqueue *kq, int fd);
+extern int MAX_FILE_DESCRIPTORS;
 
 #endif  /* ! _KQUEUE_POSIX_PLATFORM_H */
