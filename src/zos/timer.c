@@ -14,306 +14,218 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <errno.h>
-#include <fcntl.h>
 #include <pthread.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "../common/queue.h"
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
-#include "sys/event.h"
 #include "private.h"
 
-/* A request to sleep for a certain time */
-struct sleepreq {
-    int         pfd;            /* fd to poll for ACKs */
-    int         wfd;            /* fd to wake up when sleep is over */
-    uintptr_t   ident;          /* from kevent */
-    intptr_t    interval;       /* sleep time, in milliseconds */
-    pthread_cond_t  cond;
-    pthread_mutex_t mtx;
-    struct sleepstat *stat;
+struct sleeper_info {
+    /* @status: 0: not done; 1: good; -1: bad */
+    int status;
+    struct knote *orig_knote;
+    uintptr_t interval;
 };
-
-/* Information about a successful sleep operation */
-struct sleepinfo {
-    uintptr_t   ident;          /* from kevent */
-    uintptr_t   counter;        /* number of times the timer expired */
-};
-
-#if !defined(false) && !defined(true)
-typedef enum { false = 0, true = 1 } bool;
-#endif
 
 static void *
-sleeper_thread(void *arg)
+sleeper_thread(void *opaque)
 {
-    struct sleepreq *sr = (struct sleepreq *) arg;
-    struct sleepinfo si;
+    /* main thread is responsible for managing opaque memory */
+    struct sleeper_info *orig_info = (struct sleeper_info *)opaque;
+    struct sleeper_info info = *orig_info;
+    struct timespec ts;
     struct timeval now;
-    struct timespec req;
-    sigset_t        mask;
-    ssize_t         cnt;
-    bool            cts = true;     /* Clear To Send */
-    char            buf[1];
-	int rv;
+    pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
+    pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
-#if 0
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-#endif
+    atomic_inc(&orig_info->status);
 
-    /* Initialize the response */
-    si.ident = sr->ident;
-    si.counter = 0;
+    gettimeofday(&now, NULL);
+    ts.tv_sec = now.tv_sec + info.interval / 1000;
+    ts.tv_nsec = now.tv_usec * 1000 + (info.interval % 1000) * 1000000;
+    /* make sure tv_nsec is no larger than 999999999 */
+    ts.tv_sec += ts.tv_nsec / 1000000000;
+    ts.tv_nsec = ts.tv_nsec % 1000000000;
 
-    /* Block all signals */
-    sigfillset(&mask);
-    (void) pthread_sigmask(SIG_BLOCK, &mask, NULL);
+    dbg_printf("about to goto sleep, will wakeup %ld.%lu later",
+               info.interval / 1000, info.interval % 1000);
 
-    for (;;) {
+    /* go sleep */
+    pthread_mutex_lock(&mtx);
+    /* FIXME: handle error */
+    pthread_cond_timedwait(&cond, &mtx, &ts);
+    pthread_mutex_unlock(&mtx);
 
-        pthread_mutex_lock(&sr->mtx);
+    info.orig_knote->kdata.expired = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 
-        /* Convert the timeout into an absolute time */
-        /* Convert milliseconds into seconds+nanoseconds */
-        gettimeofday(&now, NULL);
-        req.tv_sec  = now.tv_sec + sr->interval / 1000;
-        req.tv_nsec = now.tv_usec + ((sr->interval % 1000) * 1000000);
+    dbg_printf("wake up from sleep");
 
-        /* Sleep */
-        dbg_printf("sleeping for %ld ms", (unsigned long) sr->interval);
-		rv = pthread_cond_timedwait(&sr->cond, &sr->mtx, &req);
-        pthread_mutex_unlock(&sr->mtx);
-        if (rv == 0) {
-            /* _timer_delete() has requested that we terminate */
-            dbg_puts("terminating sleeper thread");
-            break;
-        } else if (rv != 0) {
-            dbg_printf("rv=%d %s", rv, strerror(rv));
-			if (rv == EINTR)
-                abort(); //FIXME should not happen
+    /* wake up */
+    int cnt;
+    int write_fd = info.orig_knote->kdata.kn_eventfd[1];
 
-			//ASSUME: rv == ETIMEDOUT
-        }
-        si.counter++;
-        dbg_printf(" -------- sleep over (CTS=%d)----------", cts);
-
-        /* Test if the previous wakeup has been acknowledged */
-        if (!cts) {
-            cnt = read(sr->wfd, &buf, 1);
-            if (cnt < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    ;
-                } else {
-                    dbg_perror("read(2)");
-                    break;
-                }
-            } else if (cnt == 0) {
-                dbg_perror("short read(2)");
-                break;
-            } else {
-                cts = true;
-            }
-        }
-
-        /* Wake up kevent waiters if they are ready */
-        if (cts) {
-            cnt = write(sr->wfd, &si, sizeof(si));
-            if (cnt < 0) {
-                /* FIXME: handle EAGAIN */
-                dbg_perror("write(2)");
-            } else if ((size_t)cnt < sizeof(si)) {
-                dbg_puts("FIXME: handle short write"); 
-            } 
-            cts = false;
-            si.counter = 0;
+write_again:
+    cnt = write(write_fd, &info.orig_knote, sizeof(info.orig_knote));
+    if (cnt < sizeof(info.orig_knote)) {
+        if (errno == EAGAIN) {
+            goto write_again;
+        } else {
+            dbg_printf("write fail: %s", strerror(errno));
         }
     }
-
-    dbg_puts("sleeper thread exiting");
-    return (NULL);
+    return NULL;
 }
 
-static int
-_timer_create(struct filter *filt, struct knote *kn)
+/* close pipefd if exist and reset pipefd to -1 */
+static void
+reset_pipe(struct filter *filt, int *pipefd)
 {
-    pthread_attr_t attr;
-    pthread_t tid;
-    struct sleepreq *req;
-    kn->kev.flags |= EV_CLEAR;
-
-    req = malloc(sizeof(*req));
-    if (req == NULL) {
-        dbg_perror("malloc");
-        return (-1);
+    int read_fd = pipefd[0];
+    int write_fd = pipefd[1];
+    if (read_fd != -1) {
+        FD_CLR(read_fd, &filt->kf_kqueue->kq_fds);
+        filt->fd_map[read_fd] = INVALID_IDENT;
+        close(read_fd);
     }
-    req->pfd = filt->kf_pfd;
-    req->wfd = filt->kf_wfd;
-    req->ident = kn->kev.ident;
-    req->interval = kn->kev.data;
-    kn->data.sleepreq = req;
-    pthread_cond_init(&req->cond, NULL);
-    pthread_mutex_init(&req->mtx, NULL);
+    if (write_fd != -1) close(write_fd);
 
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-    if (pthread_create(&tid, &attr, sleeper_thread, req) != 0) {
-        dbg_perror("pthread_create");
-        pthread_attr_destroy(&attr);
-        free(req);
-        return (-1);
-    }
-    pthread_attr_destroy(&attr);
-
-    return (0);
+    pipefd[0] = pipefd[1] = -1;
 }
 
-static int
-_timer_delete(struct knote *kn)
+static void
+setfd(struct filter *filt, int fd, int ident)
 {
-    if (kn->data.sleepreq != NULL) {
-        dbg_puts("deleting timer");
-        pthread_mutex_lock(&kn->data.sleepreq->mtx); //FIXME - error check
-        pthread_cond_signal(&kn->data.sleepreq->cond); //FIXME - error check
-        pthread_mutex_unlock(&kn->data.sleepreq->mtx); //FIXME - error check
-        pthread_cond_destroy(&kn->data.sleepreq->cond); //FIXME - error check
-        free(kn->data.sleepreq);
-        kn->data.sleepreq = NULL;
-    }
-    return (0);
+    posix_kqueue_setfd(filt->kf_kqueue, fd);
+    dbg_printf("filt->fd_map[%d] = %lu", fd, filt->fd_map[fd]);
+    assert(filt->fd_map[fd] == INVALID_IDENT);
+    filt->fd_map[fd] = ident;
+}
+
+static uintptr_t
+user_fd_to_ident(struct filter *filt, int fd)
+{
+    uintptr_t ident = filt->fd_map[fd];
+    dbg_printf("fd -> ident: %d -> 0x%lX", fd, ident);
+    return ident;
 }
 
 int
 evfilt_timer_init(struct filter *filt)
 {
-    int fd[2];
+    filt->fd_to_ident = user_fd_to_ident;
 
-    filt->fd_to_ident = default_fd_to_ident;
-
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, fd) < 0) {
-        dbg_perror("socketpair(3)");
-        return (-1);
-    }
-    if (fcntl(fd[0], F_SETFL, O_NONBLOCK) < 0
-        || fcntl(fd[1], F_SETFL, O_NONBLOCK) < 0) {
-        dbg_perror("fcntl(2)");
-        close(fd[0]);
-        close(fd[1]);
-        return (-1);
-    }
-
-    filt->kf_wfd = fd[0];
-    filt->kf_pfd = fd[1];
-
-    posix_kqueue_setfd(filt->kf_kqueue, filt->kf_pfd);
-    dbg_printf("evfilt_timer_init fd=%d", filt->kf_pfd);
-
-    return (0);
+    /* create fd_map and initialize it to 0xff */
+    size_t size = MAX_FILE_DESCRIPTORS * sizeof(uintptr_t);
+    filt->fd_map = malloc(size);
+    memset(filt->fd_map, INVALID_IDENT, size);
+    return 0;
 }
 
 void
 evfilt_timer_destroy(struct filter *filt)
 {
-    (void) close(filt->kf_wfd);
-    (void) close(filt->kf_pfd);
+    if (filt->fd_map) {
+        free(filt->fd_map);
+        filt->fd_map = NULL;
+    }
 }
 
 int
-evfilt_timer_copyout(struct kevent *dst, struct knote *src, void *ptr UNUSED)
+evfilt_timer_copyout(struct kevent *dst, struct knote *src, void *ptr)
 {
-    struct filter *filt;
-    struct sleepinfo    si;
-    ssize_t       cnt;
-    struct knote *kn;
+    uintptr_t orig_knote_ptr;
+    ssize_t n;
+    struct filter *filt = (struct filter *)ptr;
 
-    filt = (struct filter *)ptr;
+    memcpy(dst, &src->kev, sizeof(*dst));
 
-    /* Read the ident */
-    cnt = read(filt->kf_pfd, &si, sizeof(si));
-    if (cnt < 0) {
-        if (errno == EINTR)
-            return (-EINTR);
-        /* FIXME: handle EAGAIN */
-        dbg_printf("read(2): %s", strerror(errno));
-        return (-1);
-    } else if ((size_t)cnt < sizeof(si)) {
-        dbg_puts("error: short read");
-        return (-1);
+    n = read(src->kdata.kn_eventfd[0], &orig_knote_ptr, sizeof(orig_knote_ptr));
+    if (n != sizeof(orig_knote_ptr)) {
+        dbg_puts("invalid read from timerfd");
+        orig_knote_ptr = 1; /* Fail gracefully */
     }
 
-    /* Acknowlege receipt */
-    cnt = write(filt->kf_pfd, ".", 1);
-    if (cnt < 0) {
-        /* FIXME: handle EAGAIN and EINTR */
-        dbg_printf("write(2): %s", strerror(errno));
-        return (-1);
-    } else if (cnt < 1) {
-        dbg_puts("error: short write");
-        return (-1);
+    dst->data = src->kdata.expired;
+
+    if (src->kev.flags & EV_ONESHOT) {
+        evfilt_timer_knote_delete(filt, src);
+        knote_delete(filt, src);
     }
 
-    kn = knote_lookup(filt, si.ident);
-
-    /* Race condition: timer events remain queued even after
-       the knote is deleted. Ignore these events */
-    if (kn == NULL)
-        return (0);
-
-    dbg_printf("knote=%p", kn);
-    memcpy(dst, &kn->kev, sizeof(*dst));
-
-    dst->data = si.counter;
-
-//#if DEADWOOD
-    if (kn->kev.flags & EV_DISPATCH) {
-        KNOTE_DISABLE(kn);
-        _timer_delete(kn);
-    } else if (kn->kev.flags & EV_ONESHOT) {
-        _timer_delete(kn);
-        knote_delete(filt, kn);
-    } 
-//#endif
-
-    return (1);
+    return 0;
 }
 
 int
 evfilt_timer_knote_create(struct filter *filt, struct knote *kn)
 {
-    return _timer_create(filt, kn);
+    int *pipefd = &kn->kdata.kn_eventfd[0];
+
+    /* create a pipe and set the write end in non-blocking mode */
+    if (pipe(pipefd) == -1) {
+        dbg_perror("eventfd");
+        return -1;
+    }
+
+    if (fcntl(pipefd[1], F_SETFL, O_NONBLOCK) == -1) {
+        reset_pipe(filt, pipefd);
+        dbg_perror("fcntl(F_SETFL)");
+        return -1;
+    }
+
+    dbg_printf("pipefd[0] = %d, pipefd[1] = %d", pipefd[0], pipefd[1]);
+    /* add the read end of pipe to kqueue's waiting fd list */
+    setfd(filt, pipefd[0], kn->kev.ident);
+
+    /* create sleeper thread, set the interval to 0 for one shot timer */
+    uintptr_t interval = (kn->kev.flags & EV_ONESHOT) ? 0 : kn->kev.data;
+    volatile struct sleeper_info info = {
+        .status = 0,
+        .orig_knote = kn,
+        .interval = interval
+    };
+
+    int rv = 0;
+    pthread_t tid;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+    if (pthread_create(&tid, &attr, sleeper_thread, (void*)&info) != 0) {
+        dbg_printf("pthread_create fail: %s", strerror(errno));
+        rv = -1;
+    } else {
+        /* spin wait for sleeper_thread get ready */
+        do {} while (info.status == 0);
+        if (info.status == -1) {
+            rv = -1;
+        }
+    }
+    if (rv == -1) {
+        reset_pipe(filt, pipefd);
+    }
+    pthread_attr_destroy(&attr);
+    return rv;
 }
 
 int
-evfilt_timer_knote_modify(struct filter *filt, struct knote *kn, 
-        const struct kevent *kev)
+evfilt_timer_knote_modify(struct filter *filt,
+                          struct knote *kn,
+                          const struct kevent *kev)
 {
-    (void) filt;
-    (void) kn;
-    (void) kev;
+    (void)filt;
+    (void)kn;
+    (void)kev;
     return (-1); /* STUB */
 }
 
 int
 evfilt_timer_knote_delete(struct filter *filt, struct knote *kn)
 {
-    (void) filt;
-    if (kn->kev.flags & EV_DISABLE)
-        return (0);
-
-    dbg_printf("deleting timer # %d", (int) kn->kev.ident);
-    return _timer_delete(kn);
+    reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
+    return 0;
 }
 
 int
 evfilt_timer_knote_enable(struct filter *filt, struct knote *kn)
 {
+    reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return evfilt_timer_knote_create(filt, kn);
 }
 
@@ -332,5 +244,5 @@ const struct filter evfilt_timer = {
     evfilt_timer_knote_modify,
     evfilt_timer_knote_delete,
     evfilt_timer_knote_enable,
-    evfilt_timer_knote_disable,     
+    evfilt_timer_knote_disable,
 };

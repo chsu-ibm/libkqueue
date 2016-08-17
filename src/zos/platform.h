@@ -203,16 +203,18 @@ __inline int atomic_dec(int * p) {
 #define EVENTFD_PLATFORM_SPECIFIC \
     int ef_wfd; int ef_sig
 
+/* kn_eventfd is used as pipefd[2] and expired is for timer */
 #define KNOTE_PLATFORM_SPECIFIC \
-    union {                     \
+    struct {                    \
         int kn_eventfd[2];      \
+        uintptr_t expired; \
     } kdata
 
 struct filter;
 uintptr_t default_fd_to_ident(struct filter *filt, int fd);
 
 /* fd_map is for user filter to convert fd to ident */
-#define FILTER_PLATFORM_SPECIFIC                  \
+#define FILTER_PLATFORM_SPECIFIC                    \
     uintptr_t (*fd_to_ident)(struct filter *, int); \
     uintptr_t *fd_map
 
