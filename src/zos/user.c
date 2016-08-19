@@ -38,6 +38,7 @@ reset_pipe(struct filter *filt, int *pipefd)
     int read_fd = pipefd[0];
     int write_fd = pipefd[1];
     if (read_fd != -1) {
+        FD_CLR(read_fd, &filt->kf_kqueue->kq_fds);
         filt->fd_map[read_fd] = INVALID_IDENT;
         close(read_fd);
     }
