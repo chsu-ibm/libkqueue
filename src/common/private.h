@@ -71,7 +71,7 @@ struct eventfd {
  */
 #define KNFL_PASSIVE_SOCKET  (0x01)  /* Socket is in listen(2) mode */
 #define KNFL_REGULAR_FILE    (0x02)  /* File descriptor is a regular file */
-#define KNFL_CHAR_DEVICE    (0x04)  /* File descriptor is a character device */
+#define KNFL_DEVICE (0x04)           /* File descriptor is a character device */
 #define KNFL_KNOTE_DELETED   (0x10)  /* The knote object is no longer valid */
 
 struct knote {

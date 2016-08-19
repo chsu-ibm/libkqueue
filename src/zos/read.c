@@ -32,30 +32,30 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
 {
     struct kqueue *kq;
     int fd;
+    int rv;
+    struct filter *filt;
 
     kq = src->kn_kq;
     fd = (int)src->kev.ident;
 
+    memcpy(dst, &src->kev, sizeof(*dst));
     /* Special case: for regular files, return the offset from current position to end of file */
     if (src->kn_flags & KNFL_REGULAR_FILE) {
-        memcpy(dst, &src->kev, sizeof(*dst));
-        dst->data = get_eof_offset(src->kev.ident);
+        dst->data = get_eof_offset(fd);
 
         if (dst->data == 0) {
             dst->filter = 0;    /* Will cause the kevent to be discarded */
             FD_CLR(fd, &kq->kq_fds);
         }
-    
-        return 0;
-    } else if (src->kn_flags & KNFL_CHAR_DEVICE) {
-        memcpy(dst, &src->kev, sizeof(*dst));
+        rv = 0;
+        goto end;
+    } else if (src->kn_flags & KNFL_DEVICE) {
         struct stat sb;
-        fstat(src->kev.ident, &sb);
+        fstat(fd, &sb);
         dst->data = sb.st_blksize;
-        return 0;
+        rv = 0;
+        goto end;
     }
-    
-    memcpy(dst, &src->kev, sizeof(*dst));
 
     dbg_printf("evfilt_read_copyout is called. fd=%d\n", fd);
 
@@ -70,7 +70,7 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
          */
         int data;
 
-        if (ioctl(dst->ident, FIONREAD, &data) < 0) {
+        if (ioctl(fd, FIONREAD, &data) < 0) {
             /* race condition with socket close, so ignore this error */
             dbg_puts("ioctl(2) of socket failed");
             dst->data = 0;
@@ -81,7 +81,14 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
         }
     }
 
-    return 1;
+end:
+    filt = (struct filter *)ptr;
+    if (src->kev.flags & EV_ONESHOT) {
+        evfilt_read_knote_delete(filt, src);
+        knote_delete(filt, src);
+    }
+
+    return 0;
 }
 
 int
@@ -119,9 +126,6 @@ evfilt_read_knote_delete(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    fprintf(stderr, "evfilt_read_knote_delete called\n");
-    fprintf(stderr, "  fd=%d\n", fd);
-
     FD_CLR(fd, &kq->kq_fds);
 
     return 0;
@@ -153,8 +157,6 @@ evfilt_read_knote_disable(struct filter *filt, struct knote *kn)
 
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
-
-    fprintf(stderr, "evfilt_read_knote_disable is called. fd=%d\n", fd);
 
     FD_CLR(fd, &kq->kq_fds);
 
