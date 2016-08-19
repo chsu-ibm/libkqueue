@@ -89,8 +89,9 @@ posix_evfilt_user_destroy(struct filter *filt)
 int
 posix_evfilt_user_copyout(struct kevent *dst,
                           struct knote *src,
-                          void *ptr UNUSED)
+                          void *ptr)
 {
+    struct filter *filt = (struct filter *)ptr;
     assert(src != NULL);
     memcpy(dst, &src->kev, sizeof(*dst));
     dst->fflags &= ~NOTE_FFCTRLMASK;  // FIXME: Not sure if needed
@@ -112,9 +113,13 @@ posix_evfilt_user_copyout(struct kevent *dst,
         }
     }
 
-    if (src->kev.flags & EV_DISPATCH) src->kev.fflags &= ~NOTE_TRIGGER;
+    if (src->kev.flags & EV_DISPATCH) {
+        src->kev.fflags &= ~NOTE_TRIGGER;
+    } else if (src->kev.flags & EV_ONESHOT) {
+        posix_evfilt_user_knote_delete(filt, src);
+        knote_delete(filt, src);
+    }
 
-    /* indicate copyout one event */
     return (0);
 }
 
@@ -206,5 +211,5 @@ const struct filter evfilt_user = {
     posix_evfilt_user_knote_modify,
     posix_evfilt_user_knote_delete,
     posix_evfilt_user_knote_enable,
-    posix_evfilt_user_knote_disable,   
+    posix_evfilt_user_knote_disable,
 };
