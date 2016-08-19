@@ -68,9 +68,13 @@ posix_kevent_wait(struct kqueue *kq,
 
     dbg_puts("waiting for events");
 
+    /* kevent_wait is not locked in the kevent() function. To avoid race
+     * condition when accessing kq_xxx members, we add lock for protection. */
+    kqueue_lock(kq);
     nfds = kq->kq_nfds;
     rfds = kq->kq_fds;
     wfds = kq->kq_wfds;
+    kqueue_unlock(kq);
 
     n = pselect(nfds, &rfds, &wfds , NULL, timeout, NULL);
     if (n < 0) {
