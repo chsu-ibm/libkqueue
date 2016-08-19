@@ -166,7 +166,7 @@ posix_evfilt_proc_init(struct filter *filt)
 
     filt->kf_pfd = kqops.eventfd_descriptor(&filt->kf_efd);
 
-    posix_kqueue_setfd(filt->kf_kqueue, filt->kf_pfd);
+    posix_kqueue_setfd_read(filt->kf_kqueue, filt->kf_pfd);
 
     if ((ed = calloc(1, sizeof(*ed))) == NULL)
         return (-1);

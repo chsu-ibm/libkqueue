@@ -81,7 +81,7 @@ reset_pipe(struct filter *filt, int *pipefd)
     int read_fd = pipefd[0];
     int write_fd = pipefd[1];
     if (read_fd != -1) {
-        FD_CLR(read_fd, &filt->kf_kqueue->kq_fds);
+        posix_kqueue_clearfd_read(filt->kf_kqueue, read_fd);
         filt->fd_map[read_fd] = INVALID_IDENT;
         close(read_fd);
     }
@@ -93,7 +93,7 @@ reset_pipe(struct filter *filt, int *pipefd)
 static void
 setfd(struct filter *filt, int fd, int ident)
 {
-    posix_kqueue_setfd(filt->kf_kqueue, fd);
+    posix_kqueue_setfd_read(filt->kf_kqueue, fd);
     dbg_printf("filt->fd_map[%d] = %lu", fd, filt->fd_map[fd]);
     assert(filt->fd_map[fd] == INVALID_IDENT);
     filt->fd_map[fd] = ident;

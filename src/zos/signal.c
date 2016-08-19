@@ -130,7 +130,7 @@ evfilt_signal_init(struct filter *filt)
     filt->kf_efd = *sig_eventfd;
     filt->kf_pfd = kqops.eventfd_descriptor(&filt->kf_efd);
 
-    posix_kqueue_setfd(filt->kf_kqueue, filt->kf_pfd);
+    posix_kqueue_setfd_read(filt->kf_kqueue, filt->kf_pfd);
 
     dbg_printf("evfilt_signal_init fd=%d", filt->kf_pfd);
 

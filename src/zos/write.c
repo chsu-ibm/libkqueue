@@ -38,9 +38,7 @@ evfilt_socket_knote_create(struct filter *filt, struct knote *kn)
     if (kn->kn_flags & KNFL_REGULAR_FILE)
         return (-1);
 
-    FD_SET(fd, &kq->kq_wfds);
-    if (kq->kq_nfds <= fd)
-        kq->kq_nfds = fd + 1;
+    posix_kqueue_setfd_write(kq, fd);
 
     return 0;
 }
@@ -70,7 +68,7 @@ evfilt_socket_knote_delete(struct filter *filt, struct knote *kn)
     fprintf(stderr, "evfilt_socket_knote_delete called\n");
     fprintf(stderr, "  fd=%d\n", fd);
 
-    FD_CLR(fd, &kq->kq_wfds);
+    posix_kqueue_clearfd_write(kq, fd);
 
     return 0;
 }
@@ -86,9 +84,7 @@ evfilt_socket_knote_enable(struct filter *filt, struct knote *kn)
 
     fprintf(stderr, "evfilt_socket_knote_enable is called. fd=%d\n", fd);
 
-    FD_SET(fd, &kq->kq_wfds);
-    if (kq->kq_nfds <= fd)
-        kq->kq_nfds = fd + 1;
+    posix_kqueue_setfd_write(kq, fd);
 
     return 0;
 }
@@ -104,7 +100,7 @@ evfilt_socket_knote_disable(struct filter *filt, struct knote *kn)
 
     fprintf(stderr, "evfilt_socket_knote_disable is called. fd=%d\n", fd);
 
-    FD_CLR(fd, &kq->kq_wfds);
+    posix_kqueue_clearfd_write(kq, fd);
 
     return 0;
 }

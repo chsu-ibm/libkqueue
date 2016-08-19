@@ -249,8 +249,32 @@ struct tlsflat * get_tls();
 
 /* z/OS related prototypes */
 int zos_get_descriptor_type(struct knote *kn);
-void posix_kqueue_setfd(struct kqueue *kq, int fd);
+void posix_kqueue_setfd(struct kqueue *kq, int fd, int is_write);
+void posix_kqueue_clearfd(struct kqueue *kq, int fd, int is_write);
 extern int MAX_FILE_DESCRIPTORS;
 extern const uintptr_t INVALID_IDENT;
 
-#endif  /* ! _KQUEUE_POSIX_PLATFORM_H */
+static inline void
+posix_kqueue_setfd_read(struct kqueue *kq, int fd)
+{
+    posix_kqueue_setfd(kq, fd, 0);
+}
+
+static inline void
+posix_kqueue_setfd_write(struct kqueue *kq, int fd)
+{
+    posix_kqueue_setfd(kq, fd, 1);
+}
+
+static inline void
+posix_kqueue_clearfd_read(struct kqueue *kq, int fd)
+{
+    posix_kqueue_clearfd(kq, fd, 0);
+}
+
+static inline void
+posix_kqueue_clearfd_write(struct kqueue *kq, int fd)
+{
+    posix_kqueue_clearfd(kq, fd, 1);
+}
+#endif /* ! _KQUEUE_POSIX_PLATFORM_H */

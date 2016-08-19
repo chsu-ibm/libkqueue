@@ -45,7 +45,7 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
 
         if (dst->data == 0) {
             dst->filter = 0;    /* Will cause the kevent to be discarded */
-            FD_CLR(fd, &kq->kq_fds);
+            posix_kqueue_clearfd_read(kq, fd);
         }
         rv = 0;
         goto end;
@@ -99,7 +99,7 @@ evfilt_read_knote_create(struct filter *filt, struct knote *kn)
     if (zos_get_descriptor_type(kn) < 0)
         return (-1);
 
-    posix_kqueue_setfd(filt->kf_kqueue, kn->kev.ident);
+    posix_kqueue_setfd_read(filt->kf_kqueue, kn->kev.ident);
 
     return 0;
 }
@@ -126,7 +126,7 @@ evfilt_read_knote_delete(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    FD_CLR(fd, &kq->kq_fds);
+    posix_kqueue_clearfd_read(kq, fd);
 
     return 0;
 }
@@ -142,9 +142,7 @@ evfilt_read_knote_enable(struct filter *filt, struct knote *kn)
 
     fprintf(stderr, "evfilt_read_knote_enable is called. fd=%d\n", fd);
 
-    FD_SET(fd, &kq->kq_fds);
-    if (kq->kq_nfds <= fd)
-        kq->kq_nfds = fd + 1;
+    posix_kqueue_setfd_read(kq, fd);
 
     return 0;
 }
@@ -158,7 +156,7 @@ evfilt_read_knote_disable(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    FD_CLR(fd, &kq->kq_fds);
+    posix_kqueue_clearfd_read(kq, fd);
 
     return 0;
 }
