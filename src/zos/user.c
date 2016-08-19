@@ -31,7 +31,6 @@
 #include "sys/event.h"
 #include "private.h"
 
-static uintptr_t INVALID_IDENT = (uintptr_t)0xABABABABABABABABULL;
 /* close pipefd if exist and reset pipefd to -1 */
 static void
 reset_pipe(struct filter *filt, int *pipefd)

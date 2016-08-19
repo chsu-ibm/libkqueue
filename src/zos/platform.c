@@ -17,6 +17,7 @@
 #include "../common/private.h"
 
 int MAX_FILE_DESCRIPTORS = -1;
+const uintptr_t INVALID_IDENT = (uintptr_t)0xABABABABABABABABULL;
 
 static int new_kq_id(void)
 {
