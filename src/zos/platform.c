@@ -19,7 +19,44 @@
 int MAX_FILE_DESCRIPTORS = -1;
 const uintptr_t INVALID_IDENT = (uintptr_t)0xABABABABABABABABULL;
 
-static int new_kq_id(void)
+static void
+print_file_state(const struct stat *sb)
+{
+    printf("File type:                ");
+    switch (sb->st_mode & S_IFMT) {
+        case S_IFBLK:
+            printf("block device\n");
+            break;
+        case S_IFCHR:
+            printf("character device\n");
+            break;
+        case S_IFDIR:
+            printf("directory\n");
+            break;
+        case S_IFIFO:
+            printf("FIFO/pipe\n");
+            break;
+        case S_IFLNK:
+            printf("symlink\n");
+            break;
+        case S_IFREG:
+            printf("regular file\n");
+            break;
+        case S_IFSOCK:
+            printf("socket\n");
+            break;
+        default:
+            printf("unknown?\n");
+            break;
+    }
+    printf("I-node number:            %ld\n", (long)sb->st_ino);
+    printf("Preferred I/O block size: %ld bytes\n", (long)sb->st_blksize);
+    printf("File size:                %lld bytes\n", (long long)sb->st_size);
+    printf("Blocks allocated:         %lld\n", (long long)sb->st_blocks);
+}
+
+static int
+new_kq_id(void)
 {
     static int ID = 0;
     /* should only call once */
@@ -59,53 +96,53 @@ zos_get_descriptor_type(struct knote *kn)
     socklen_t slen;
     struct stat sb;
     int i, lsock;
+    int fd;
 
+    fd = kn->kev.ident;
     /*
      * Test if the descriptor is a socket.
      */
-    if (fstat(kn->kev.ident, &sb) < 0) {
+    if (fstat(fd, &sb) < 0) {
         dbg_perror("fstat(2)");
         return (-1);
     }
 
-    if (S_ISREG(sb.st_mode)) {
-        kn->kn_flags |= KNFL_REGULAR_FILE;
-        dbg_printf("fd %d is a regular file\n", (int)kn->kev.ident);
-        return (0);
-    }
-
-    if (S_ISCHR(sb.st_mode)) {
-        kn->kn_flags |= KNFL_CHAR_DEVICE;
-        dbg_printf("fd %d is a character device\n", (int)kn->kev.ident);
-        return (0);
-    }
-
-    /*
-     * Test if the socket is active or passive.
-     */
-    if (! S_ISSOCK(sb.st_mode)) {
-        KQ_ABORT("fd %d is neither a regular file nor a socket", kn->kev.ident);
-    }
-
-    slen = sizeof(lsock);
-    lsock = 0;
-    i = getsockopt(kn->kev.ident, SOL_SOCKET, SO_ACCEPTCONN, (char *) &lsock, &slen);
-    if (i < 0) {
-        switch (errno) {
-            case ENOTSOCK:   /* same as lsock = 0 */
-                return (0);
-                break;
-            default:
-                dbg_perror("getsockopt(3)");
-                return (-1);
-        }
-    } else {
-        if (lsock) 
-            kn->kn_flags |= KNFL_PASSIVE_SOCKET;
-        return (0);
+    switch (sb.st_mode & S_IFMT) {
+        case S_IFREG:
+            kn->kn_flags |= KNFL_REGULAR_FILE;
+            break;
+        /* character or block device */
+        case S_IFCHR:
+        case S_IFBLK:
+            kn->kn_flags |= KNFL_DEVICE;
+            break;
+        /* fifo is treated as a active socket. */
+        case S_IFIFO:
+            break;
+        case S_IFSOCK:
+            slen = sizeof(lsock);
+            lsock = 0;
+            if (getsockopt(fd, SOL_SOCKET, SO_ACCEPTCONN, (char *)&lsock,
+                           &slen) < 0) {
+                switch (errno) {
+                    case ENOTSOCK: /* same as lsock = 0 */
+                        return (0);
+                        break;
+                    default:
+                        dbg_perror("getsockopt(3)");
+                        return (-1);
+                }
+            } else {
+                if (lsock) kn->kn_flags |= KNFL_PASSIVE_SOCKET;
+            }
+            break;
+        default:
+            print_file_state(&sb);
+            KQ_ABORT("fd %d is neither a regular file nor a socket",
+                     kn->kev.ident);
+            break;
     }
 }
-
 
 int
 posix_kqueue_init(struct kqueue *kq)
