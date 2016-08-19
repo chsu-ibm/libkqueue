@@ -126,6 +126,8 @@ process(struct kevent *eventlist,
         if (!FD_ISSET(fd, fds)) continue;
 
         uintptr_t ident = filt->fd_to_ident(filt, fd);
+        if (ident == INVALID_IDENT) continue;
+
         dbg_printf("filt = %d, fd -> ident = %d -> %lu", filt->kf_id, fd,
                    ident);
         /* FIXME: this operation is very expensive, try to avoid it */
