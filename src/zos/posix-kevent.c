@@ -150,14 +150,17 @@ process(struct kevent *eventlist,
     for (fd = 0; fd < nfds && nret < remain; ++fd) {
         if (!FD_ISSET(fd, fds)) continue;
 
-        uintptr_t ident = filt->fd_to_ident(filt, fd);
-        if (ident == INVALID_IDENT) continue;
+        struct knote *kn;
 
-        dbg_printf("filt = %d, fd -> ident = %d -> %lu", filt->kf_id, fd,
-                   ident);
-        /* FIXME: this operation is very expensive, try to avoid it */
-        struct knote *kn = knote_lookup(filt, ident);
-        dbg_printf("knote_lookup(0x%p, %lu) = 0x%p", filt, ident, kn);
+        if (filt->knote_map) {
+            kn = filt->knote_map[fd];
+        } else {
+            uintptr_t ident = filt->fd_to_ident(filt, fd);
+            if (ident == INVALID_IDENT) continue;
+            /* FIXME: this operation is very expensive, try to avoid it */
+            kn = knote_lookup(filt, ident);
+        }
+
         if (kn == NULL) continue;
 
         dbg_printf("before kf_copyout");

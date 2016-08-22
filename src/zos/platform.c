@@ -19,6 +19,21 @@
 int MAX_FILE_DESCRIPTORS = -1;
 const uintptr_t INVALID_IDENT = (uintptr_t)0xABABABABABABABABULL;
 
+struct knote **
+allocate_knote_map()
+{
+    size_t size = MAX_FILE_DESCRIPTORS * sizeof(void *);
+    struct knote **fd_map = malloc(size);
+    memset(fd_map, 0, size);
+    return fd_map;
+}
+
+void
+deallocate_knote_map(struct knote **fd_map)
+{
+    if (fd_map) free(fd_map);
+}
+
 static void
 print_file_state(const struct stat *sb)
 {

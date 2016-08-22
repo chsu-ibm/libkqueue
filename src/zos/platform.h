@@ -216,7 +216,8 @@ uintptr_t default_fd_to_ident(struct filter *filt, int fd);
 /* fd_map is for user filter to convert fd to ident */
 #define FILTER_PLATFORM_SPECIFIC                    \
     uintptr_t (*fd_to_ident)(struct filter *, int); \
-    uintptr_t *fd_map
+    uintptr_t *fd_map;                              \
+    struct knote **knote_map
 
 /* forward declaration */
 struct kqueue;
@@ -253,6 +254,8 @@ void posix_kqueue_setfd(struct kqueue *kq, int fd, int is_write);
 void posix_kqueue_clearfd(struct kqueue *kq, int fd, int is_write);
 extern int MAX_FILE_DESCRIPTORS;
 extern const uintptr_t INVALID_IDENT;
+struct knote **allocate_knote_map();
+void deallocate_knote_map(struct knote **fd_map);
 
 static inline void
 posix_kqueue_setfd_read(struct kqueue *kq, int fd)
