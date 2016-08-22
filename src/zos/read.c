@@ -1,9 +1,6 @@
-
 #include "private.h"
-
 #include <sys/ioctl.h>
 
-        
 /*
  * Return the offset from the current position to end of file.
  */
@@ -47,14 +44,12 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
             dst->filter = 0;    /* Will cause the kevent to be discarded */
             posix_kqueue_clearfd_read(kq, fd);
         }
-        rv = 0;
-        goto end;
+        return 0;
     } else if (src->kn_flags & KNFL_DEVICE) {
         struct stat sb;
         fstat(fd, &sb);
         dst->data = sb.st_blksize;
-        rv = 0;
-        goto end;
+        return 0;
     }
 
     dbg_printf("evfilt_read_copyout is called. fd=%d\n", fd);
@@ -81,13 +76,6 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
         }
     }
 
-end:
-    filt = (struct filter *)ptr;
-    if (src->kev.flags & EV_ONESHOT) {
-        evfilt_read_knote_delete(filt, src);
-        knote_delete(filt, src);
-    }
-
     return 0;
 }
 
@@ -100,6 +88,7 @@ evfilt_read_knote_create(struct filter *filt, struct knote *kn)
         return (-1);
 
     posix_kqueue_setfd_read(filt->kf_kqueue, kn->kev.ident);
+    filt->knote_map[kn->kev.ident] = kn;
 
     return 0;
 }
@@ -126,7 +115,9 @@ evfilt_read_knote_delete(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
+    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_read(kq, fd);
+    filt->knote_map[fd] = NULL;
 
     return 0;
 }
@@ -140,9 +131,8 @@ evfilt_read_knote_enable(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    fprintf(stderr, "evfilt_read_knote_enable is called. fd=%d\n", fd);
-
     posix_kqueue_setfd_read(kq, fd);
+    filt->knote_map[fd] = kn;
 
     return 0;
 }
@@ -156,7 +146,9 @@ evfilt_read_knote_disable(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
+    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_read(kq, fd);
+    filt->knote_map[fd] = NULL;
 
     return 0;
 }
@@ -164,14 +156,20 @@ evfilt_read_knote_disable(struct filter *filt, struct knote *kn)
 int
 evfilt_read_init(struct filter *filt)
 {
-    filt->fd_to_ident = default_fd_to_ident;
+    filt->knote_map = allocate_knote_map();
     return 0;
+}
+
+void
+evfilt_read_destroy(struct filter *filt)
+{
+    deallocate_knote_map(filt->knote_map);
 }
 
 const struct filter evfilt_read = {
     EVFILT_READ,
     evfilt_read_init,
-    NULL,
+    evfilt_read_destroy,
     evfilt_read_copyout,
     evfilt_read_knote_create,
     evfilt_read_knote_modify,
