@@ -66,6 +66,7 @@ write_again:
     cnt = write(write_fd, &info.orig_knote, sizeof(info.orig_knote));
     if (cnt < sizeof(info.orig_knote)) {
         if (errno == EAGAIN) {
+            dbg_printf("write again: %s", strerror(errno));
             goto write_again;
         } else {
             dbg_printf("write fail: %s", strerror(errno));
@@ -81,8 +82,8 @@ reset_pipe(struct filter *filt, int *pipefd)
     int read_fd = pipefd[0];
     int write_fd = pipefd[1];
     if (read_fd != -1) {
+        filt->knote_map[read_fd] = NULL;
         posix_kqueue_clearfd_read(filt->kf_kqueue, read_fd);
-        filt->fd_map[read_fd] = INVALID_IDENT;
         close(read_fd);
     }
     if (write_fd != -1) close(write_fd);
@@ -93,39 +94,19 @@ reset_pipe(struct filter *filt, int *pipefd)
 static void
 setfd(struct filter *filt, int fd, int ident)
 {
-    posix_kqueue_setfd_read(filt->kf_kqueue, fd);
-    dbg_printf("filt->fd_map[%d] = %lu", fd, filt->fd_map[fd]);
-    assert(filt->fd_map[fd] == INVALID_IDENT);
-    filt->fd_map[fd] = ident;
-}
-
-static uintptr_t
-user_fd_to_ident(struct filter *filt, int fd)
-{
-    uintptr_t ident = filt->fd_map[fd];
-    dbg_printf("fd -> ident: %d -> 0x%lX", fd, ident);
-    return ident;
 }
 
 int
 evfilt_timer_init(struct filter *filt)
 {
-    filt->fd_to_ident = user_fd_to_ident;
-
-    /* create fd_map and initialize it to 0xff */
-    size_t size = MAX_FILE_DESCRIPTORS * sizeof(uintptr_t);
-    filt->fd_map = malloc(size);
-    memset(filt->fd_map, INVALID_IDENT, size);
+    filt->knote_map = allocate_knote_map();
     return 0;
 }
 
 void
 evfilt_timer_destroy(struct filter *filt)
 {
-    if (filt->fd_map) {
-        free(filt->fd_map);
-        filt->fd_map = NULL;
-    }
+    deallocate_knote_map(filt->knote_map);
 }
 
 int
@@ -144,11 +125,6 @@ evfilt_timer_copyout(struct kevent *dst, struct knote *src, void *ptr)
     }
 
     dst->data = src->kdata.expired;
-
-    if (src->kev.flags & EV_ONESHOT) {
-        evfilt_timer_knote_delete(filt, src);
-        knote_delete(filt, src);
-    }
 
     return 0;
 }
@@ -172,7 +148,8 @@ evfilt_timer_knote_create(struct filter *filt, struct knote *kn)
 
     dbg_printf("pipefd[0] = %d, pipefd[1] = %d", pipefd[0], pipefd[1]);
     /* add the read end of pipe to kqueue's waiting fd list */
-    setfd(filt, pipefd[0], kn->kev.ident);
+    posix_kqueue_setfd_read(filt->kf_kqueue, pipefd[0]);
+    filt->knote_map[pipefd[0]] = kn;
 
     /* create sleeper thread, set the interval to 0 for one shot timer */
     uintptr_t interval = (kn->kev.flags & EV_ONESHOT) ? 0 : kn->kev.data;
@@ -218,6 +195,9 @@ evfilt_timer_knote_modify(struct filter *filt,
 int
 evfilt_timer_knote_delete(struct filter *filt, struct knote *kn)
 {
+    int fd = kn->kdata.kn_eventfd[0];
+    dbg_printf("kn = %p, filt->knote_map[%d] = %p", kn, fd, filt->knote_map[fd]);
+    assert(kn == filt->knote_map[kn->kdata.kn_eventfd[0]]);
     reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return 0;
 }
@@ -225,6 +205,7 @@ evfilt_timer_knote_delete(struct filter *filt, struct knote *kn)
 int
 evfilt_timer_knote_enable(struct filter *filt, struct knote *kn)
 {
+    assert(kn == filt->knote_map[kn->kdata.kn_eventfd[0]]);
     reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return evfilt_timer_knote_create(filt, kn);
 }
