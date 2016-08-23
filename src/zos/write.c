@@ -1,6 +1,4 @@
-
 #include "private.h"
-
 #include <sys/ioctl.h>
 
 int
@@ -39,6 +37,7 @@ evfilt_socket_knote_create(struct filter *filt, struct knote *kn)
         return (-1);
 
     posix_kqueue_setfd_write(kq, fd);
+    filt->knote_map[fd] = kn;
 
     return 0;
 }
@@ -65,10 +64,9 @@ evfilt_socket_knote_delete(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    fprintf(stderr, "evfilt_socket_knote_delete called\n");
-    fprintf(stderr, "  fd=%d\n", fd);
-
+    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_write(kq, fd);
+    filt->knote_map[fd] = NULL;
 
     return 0;
 }
@@ -82,9 +80,8 @@ evfilt_socket_knote_enable(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    fprintf(stderr, "evfilt_socket_knote_enable is called. fd=%d\n", fd);
-
     posix_kqueue_setfd_write(kq, fd);
+    filt->knote_map[fd] = kn;
 
     return 0;
 }
@@ -98,9 +95,9 @@ evfilt_socket_knote_disable(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    fprintf(stderr, "evfilt_socket_knote_disable is called. fd=%d\n", fd);
-
+    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_write(kq, fd);
+    filt->knote_map[fd] = NULL;
 
     return 0;
 }
@@ -108,14 +105,20 @@ evfilt_socket_knote_disable(struct filter *filt, struct knote *kn)
 int
 evfilt_socket_init(struct filter *filt)
 {
-    filt->fd_to_ident = default_fd_to_ident;
+    filt->knote_map = allocate_knote_map();
     return 0;
+}
+
+void
+evfilt_socket_destroy(struct filter *filt)
+{
+    deallocate_knote_map(filt->knote_map);
 }
 
 const struct filter evfilt_write = {
     EVFILT_WRITE,
     evfilt_socket_init,
-    NULL,
+    evfilt_socket_destroy,
     evfilt_socket_copyout,
     evfilt_socket_knote_create,
     evfilt_socket_knote_modify,
