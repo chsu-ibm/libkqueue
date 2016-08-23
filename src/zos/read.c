@@ -53,6 +53,11 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
     }
 
     dbg_printf("evfilt_read_copyout is called. fd=%d\n", fd);
+    struct stat sb;
+    if (fstat(fd, &sb) == -1 && errno == EBADF) {
+        dst->flags |= EV_EOF;
+        errno = 0;
+    }
 
     if (src->kn_flags & KNFL_PASSIVE_SOCKET) {
         /* On return, data contains the length of the 

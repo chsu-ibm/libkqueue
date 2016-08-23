@@ -5,9 +5,16 @@ int
 evfilt_socket_copyout(struct kevent *dst, struct knote *src, void *ptr)
 {
     int data;
+    struct stat sb;
+    int fd;
 
     memcpy(dst, &src->kev, sizeof(*dst));
 
+    fd = src->kev.ident;
+    if (fstat(fd, &sb) == -1 && errno == EBADF) {
+        dst->flags |= EV_EOF;
+        errno = 0;
+    }
     /* On return, data contains the the amount of space remaining in the write buffer */
     if (ioctl(dst->ident, TIOCOUTQ, &data) < 0) {
             /* race condition with socket close, so ignore this error */
@@ -17,7 +24,7 @@ evfilt_socket_copyout(struct kevent *dst, struct knote *src, void *ptr)
 
     dst->data = data;
 
-    return 1;
+    return 0;
 }
 
 int

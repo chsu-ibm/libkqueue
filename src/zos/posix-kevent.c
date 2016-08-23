@@ -62,7 +62,7 @@ posix_kevent_wait(struct kqueue *kq,
 {
     tlsflat_t *tls;
     int n, nfds;
-    fd_set rfds, wfds;
+    fd_set rfds, wfds, rfds1, wfds1;
     struct timespec ts;
     int i ;
 
@@ -76,14 +76,33 @@ posix_kevent_wait(struct kqueue *kq,
     wfds = kq->kq_wfds;
     kqueue_unlock(kq);
 
+    rfds1 = rfds;
+    wfds1 = wfds;
     n = pselect(nfds, &rfds, &wfds , NULL, timeout, NULL);
     if (n < 0) {
-        if (errno == EINTR) {
-            dbg_puts("signal caught");
-            return (-1);
+        dbg_printf("pselect(2): %s", strerror(errno));
+        if (errno != EBADF)
+            return -1;
+        /* Handle EBADF for socket file descriptor */
+        struct stat sb;
+        FD_ZERO(&rfds);
+        FD_ZERO(&wfds);
+        n = 0;
+        for (i = 0; i < nfds; i++) {
+            if (FD_ISSET(i, &rfds1)) {
+                if (fstat(i, &sb) == -1 && errno == EBADF) {
+                    FD_SET(i, &rfds);
+                    n++;
+                }
+            }
+            if (FD_ISSET(i, &wfds1)) {
+                if (fstat(i, &sb) == -1 && errno == EBADF) {
+                    FD_SET(i, &wfds);
+                    n++;
+                }
+            }
         }
-        dbg_perror("pselect(2)");
-        return (-1);
+        errno = 0;
     }
 
     tls = get_tls();
