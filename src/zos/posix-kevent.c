@@ -177,7 +177,7 @@ process(struct kevent *eventlist,
         struct knote *kn;
 
         if (filt->knote_map) {
-            kn = filt->knote_map[fd];
+            kn = knote_map_lookup(filt->knote_map, fd);
         } else {
             uintptr_t ident = filt->fd_to_ident(filt, fd);
             if (ident == INVALID_IDENT) continue;

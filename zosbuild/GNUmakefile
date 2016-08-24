@@ -72,6 +72,7 @@ src/zos/signal.c \
 src/zos/timer.c \
 src/zos/proc.c \
 src/zos/posix-kevent.c \
+src/zos/knote_hash_table.c \
 src/zos/tls.c
 
 CSRC_TEST= \

@@ -38,7 +38,7 @@ reset_pipe(struct filter *filt, int *pipefd)
     int read_fd = pipefd[0];
     int write_fd = pipefd[1];
     if (read_fd != -1) {
-        filt->knote_map[read_fd] = NULL;
+        knote_map_remove(filt->knote_map, read_fd);
         posix_kqueue_clearfd_read(filt->kf_kqueue, read_fd);
         close(read_fd);
     }
@@ -50,14 +50,14 @@ reset_pipe(struct filter *filt, int *pipefd)
 int
 posix_evfilt_user_init(struct filter *filt)
 {
-    filt->knote_map = allocate_knote_map();
+    filt->knote_map = knote_map_init();
     return 0;
 }
 
 void
 posix_evfilt_user_destroy(struct filter *filt)
 {
-    deallocate_knote_map(filt->knote_map);
+    knote_map_destroy(filt->knote_map);
 }
 
 int
@@ -110,7 +110,7 @@ posix_evfilt_user_knote_create(struct filter *filt, struct knote *kn)
                pipefd[0], pipefd[1]);
     /* add the read end of pipe to kqueue's waiting fd list */
     posix_kqueue_setfd_read(filt->kf_kqueue, pipefd[0]);
-    filt->knote_map[pipefd[0]] = kn;
+    knote_map_insert(filt->knote_map, pipefd[0], kn);
     return 0;
 }
 
@@ -150,8 +150,6 @@ int
 posix_evfilt_user_knote_delete(struct filter *filt, struct knote *kn)
 {
     dbg_printf("filt %p kn %p", filt, kn);
-    assert(filt->knote_map[kn->kdata.kn_eventfd[0]] == kn);
-
     reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return (0);
 }
@@ -160,8 +158,6 @@ int
 posix_evfilt_user_knote_enable(struct filter *filt, struct knote *kn)
 {
     dbg_printf("filt %p kn %p", filt, kn);
-    assert(filt->knote_map[kn->kdata.kn_eventfd[0]] == kn);
-
     kn->kev.fflags &= ~NOTE_TRIGGER;
     reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return posix_evfilt_user_knote_create(filt, kn);

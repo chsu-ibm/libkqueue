@@ -82,7 +82,7 @@ reset_pipe(struct filter *filt, int *pipefd)
     int read_fd = pipefd[0];
     int write_fd = pipefd[1];
     if (read_fd != -1) {
-        filt->knote_map[read_fd] = NULL;
+        knote_map_remove(filt->knote_map, read_fd);
         posix_kqueue_clearfd_read(filt->kf_kqueue, read_fd);
         close(read_fd);
     }
@@ -91,22 +91,17 @@ reset_pipe(struct filter *filt, int *pipefd)
     pipefd[0] = pipefd[1] = -1;
 }
 
-static void
-setfd(struct filter *filt, int fd, int ident)
-{
-}
-
 int
 evfilt_timer_init(struct filter *filt)
 {
-    filt->knote_map = allocate_knote_map();
+    filt->knote_map = knote_map_init();
     return 0;
 }
 
 void
 evfilt_timer_destroy(struct filter *filt)
 {
-    deallocate_knote_map(filt->knote_map);
+    knote_map_destroy(filt->knote_map);
 }
 
 int
@@ -149,7 +144,7 @@ evfilt_timer_knote_create(struct filter *filt, struct knote *kn)
     dbg_printf("pipefd[0] = %d, pipefd[1] = %d", pipefd[0], pipefd[1]);
     /* add the read end of pipe to kqueue's waiting fd list */
     posix_kqueue_setfd_read(filt->kf_kqueue, pipefd[0]);
-    filt->knote_map[pipefd[0]] = kn;
+    knote_map_insert(filt->knote_map, pipefd[0], kn);
 
     /* create sleeper thread, set the interval to 0 for one shot timer */
     uintptr_t interval = (kn->kev.flags & EV_ONESHOT) ? 0 : kn->kev.data;
@@ -196,8 +191,6 @@ int
 evfilt_timer_knote_delete(struct filter *filt, struct knote *kn)
 {
     int fd = kn->kdata.kn_eventfd[0];
-    dbg_printf("kn = %p, filt->knote_map[%d] = %p", kn, fd, filt->knote_map[fd]);
-    assert(kn == filt->knote_map[kn->kdata.kn_eventfd[0]]);
     reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return 0;
 }
@@ -205,7 +198,6 @@ evfilt_timer_knote_delete(struct filter *filt, struct knote *kn)
 int
 evfilt_timer_knote_enable(struct filter *filt, struct knote *kn)
 {
-    assert(kn == filt->knote_map[kn->kdata.kn_eventfd[0]]);
     reset_pipe(filt, &kn->kdata.kn_eventfd[0]);
     return evfilt_timer_knote_create(filt, kn);
 }

@@ -92,8 +92,9 @@ evfilt_read_knote_create(struct filter *filt, struct knote *kn)
     if (zos_get_descriptor_type(kn) < 0)
         return (-1);
 
-    posix_kqueue_setfd_read(filt->kf_kqueue, kn->kev.ident);
-    filt->knote_map[kn->kev.ident] = kn;
+    int fd = kn->kev.ident;
+    posix_kqueue_setfd_read(filt->kf_kqueue, fd);
+    knote_map_insert(filt->knote_map, fd, kn);
 
     return 0;
 }
@@ -120,9 +121,8 @@ evfilt_read_knote_delete(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_read(kq, fd);
-    filt->knote_map[fd] = NULL;
+    knote_map_remove(filt->knote_map, fd);
 
     return 0;
 }
@@ -137,7 +137,7 @@ evfilt_read_knote_enable(struct filter *filt, struct knote *kn)
     fd = (int)kn->kev.ident;
 
     posix_kqueue_setfd_read(kq, fd);
-    filt->knote_map[fd] = kn;
+    knote_map_insert(filt->knote_map, fd, kn);
 
     return 0;
 }
@@ -151,9 +151,8 @@ evfilt_read_knote_disable(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_read(kq, fd);
-    filt->knote_map[fd] = NULL;
+    knote_map_remove(filt->knote_map, fd);
 
     return 0;
 }
@@ -161,14 +160,14 @@ evfilt_read_knote_disable(struct filter *filt, struct knote *kn)
 int
 evfilt_read_init(struct filter *filt)
 {
-    filt->knote_map = allocate_knote_map();
+    filt->knote_map = knote_map_init();
     return 0;
 }
 
 void
 evfilt_read_destroy(struct filter *filt)
 {
-    deallocate_knote_map(filt->knote_map);
+    knote_map_destroy(filt->knote_map);
 }
 
 const struct filter evfilt_read = {

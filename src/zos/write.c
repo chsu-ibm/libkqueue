@@ -44,7 +44,7 @@ evfilt_socket_knote_create(struct filter *filt, struct knote *kn)
         return (-1);
 
     posix_kqueue_setfd_write(kq, fd);
-    filt->knote_map[fd] = kn;
+    knote_map_insert(filt->knote_map, fd, kn);
 
     return 0;
 }
@@ -71,9 +71,8 @@ evfilt_socket_knote_delete(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_write(kq, fd);
-    filt->knote_map[fd] = NULL;
+    knote_map_remove(filt->knote_map, fd);
 
     return 0;
 }
@@ -88,7 +87,7 @@ evfilt_socket_knote_enable(struct filter *filt, struct knote *kn)
     fd = (int)kn->kev.ident;
 
     posix_kqueue_setfd_write(kq, fd);
-    filt->knote_map[fd] = kn;
+    knote_map_insert(filt->knote_map, fd, kn);
 
     return 0;
 }
@@ -102,9 +101,8 @@ evfilt_socket_knote_disable(struct filter *filt, struct knote *kn)
     kq = kn->kn_kq;    
     fd = (int)kn->kev.ident;
 
-    assert(filt->knote_map[fd] == kn);
     posix_kqueue_clearfd_write(kq, fd);
-    filt->knote_map[fd] = NULL;
+    knote_map_remove(filt->knote_map, fd);
 
     return 0;
 }
@@ -112,14 +110,14 @@ evfilt_socket_knote_disable(struct filter *filt, struct knote *kn)
 int
 evfilt_socket_init(struct filter *filt)
 {
-    filt->knote_map = allocate_knote_map();
+    filt->knote_map = knote_map_init();
     return 0;
 }
 
 void
 evfilt_socket_destroy(struct filter *filt)
 {
-    deallocate_knote_map(filt->knote_map);
+    knote_map_destroy(filt->knote_map);
 }
 
 const struct filter evfilt_write = {

@@ -210,52 +210,47 @@ __inline int atomic_dec(int * p) {
         uintptr_t expired; \
     } kdata
 
-struct filter;
-uintptr_t default_fd_to_ident(struct filter *filt, int fd);
-
-/* fd_map is for user filter to convert fd to ident */
-#define FILTER_PLATFORM_SPECIFIC                    \
-    uintptr_t (*fd_to_ident)(struct filter *, int); \
-    uintptr_t *fd_map;                              \
-    struct knote **knote_map
-
 /* forward declaration */
 struct kqueue;
+struct filter;
 struct eventfd;
 struct knote;
 
-void    posix_kqueue_free(struct kqueue *);
-int     posix_kqueue_init(struct kqueue *);
+uintptr_t default_fd_to_ident(struct filter *filt, int fd);
 
-int     posix_kevent_wait(struct kqueue *, int nevents, const struct timespec *);
-int     posix_kevent_copyout(struct kqueue *, int, struct kevent *, int);
+#define FILTER_PLATFORM_SPECIFIC                    \
+    uintptr_t (*fd_to_ident)(struct filter *, int); \
+    uintptr_t *fd_map;                              \
+    knote_map_t knote_map
 
-int     posix_eventfd_init(struct eventfd *);
-void    posix_eventfd_close(struct eventfd *);
-int     posix_eventfd_raise(struct eventfd *);
-int     posix_eventfd_lower(struct eventfd *);
-int     posix_eventfd_descriptor(struct eventfd *);
+void posix_kqueue_free(struct kqueue *);
+int posix_kqueue_init(struct kqueue *);
 
+int posix_kevent_wait(struct kqueue *, int nevents, const struct timespec *);
+int posix_kevent_copyout(struct kqueue *, int, struct kevent *, int);
+
+int posix_eventfd_init(struct eventfd *);
+void posix_eventfd_close(struct eventfd *);
+int posix_eventfd_raise(struct eventfd *);
+int posix_eventfd_lower(struct eventfd *);
+int posix_eventfd_descriptor(struct eventfd *);
 
 typedef struct tlsflat {
-   char buf1[64];
-   char buf2[1024];
-   char buf3[1024];
-   char buf4[1024];
-   fd_set rfds;
-   fd_set wfds;
+    char buf1[64];
+    char buf2[1024];
+    char buf3[1024];
+    char buf4[1024];
+    fd_set rfds;
+    fd_set wfds;
 } tlsflat_t;
 
-struct tlsflat * get_tls();
+struct tlsflat *get_tls();
 
 /* z/OS related prototypes */
 int zos_get_descriptor_type(struct knote *kn);
 void posix_kqueue_setfd(struct kqueue *kq, int fd, int is_write);
 void posix_kqueue_clearfd(struct kqueue *kq, int fd, int is_write);
-extern int MAX_FILE_DESCRIPTORS;
 extern const uintptr_t INVALID_IDENT;
-struct knote **allocate_knote_map();
-void deallocate_knote_map(struct knote **fd_map);
 
 static inline void
 posix_kqueue_setfd_read(struct kqueue *kq, int fd)
@@ -280,4 +275,6 @@ posix_kqueue_clearfd_write(struct kqueue *kq, int fd)
 {
     posix_kqueue_clearfd(kq, fd, 1);
 }
+
+#include "knote_hash_table.h"
 #endif /* ! _KQUEUE_POSIX_PLATFORM_H */
