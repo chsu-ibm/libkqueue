@@ -30,7 +30,9 @@ posix_kqueue_setfd(struct kqueue *kq, int fd, int is_write)
     dbg_printf("setting fd %d", fd);
     fd_set *fds = (is_write) ? &kq->kq_wfds : &kq->kq_fds;
     FD_SET(fd, fds);
-    if (kq->kq_nfds <= fd) kq->kq_nfds = fd + 1;
+    if (kq->kq_nfds <= fd) {
+        kq->kq_nfds = fd + 1;
+    }
 }
 
 void
@@ -44,11 +46,14 @@ posix_kqueue_clearfd(struct kqueue *kq, int fd, int is_write)
     if (fd == kq->kq_nfds - 1) {
         /* update kq_nfds */
         int i, cur_max = -1;
-        for (i = 0; i != nfds; ++i) {
-            if (FD_ISSET(i, &kq->kq_fds))
+        for (i = fd; i >= 0; --i) {
+            if (FD_ISSET(i, &kq->kq_fds)) {
                 cur_max = i;
-            else if (FD_ISSET(i, &kq->kq_wfds))
+                break;
+            } else if (FD_ISSET(i, &kq->kq_wfds)) {
                 cur_max = i;
+                break;
+            }
         }
         assert(cur_max != -1);
         kq->kq_nfds = cur_max + 1;
