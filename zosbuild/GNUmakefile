@@ -24,7 +24,7 @@ endif
 ifdef DEBUG
 MORE_FLAGS=-DDEBUG=1 -UNDEBUG
 else
-MORE_FLAGS=
+MORE_FLAGS=-DNDEBUG
 endif
 
 ME:=$(firstword $(MAKEFILE_LIST))
