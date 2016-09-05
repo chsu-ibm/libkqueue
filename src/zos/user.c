@@ -136,6 +136,8 @@ posix_evfilt_user_knote_modify(struct filter *filt, struct knote *kn,
     if ((!(kn->kev.flags & EV_DISABLE)) && kev->fflags & NOTE_TRIGGER) {
         dbg_printf("trigger user event: knote = 0x%p", kn);
         kn->kev.fflags |= NOTE_TRIGGER;
+        if (kn->kdata.kn_eventfd[0] == -1)
+            return 0;
         if (write(kn->kdata.kn_eventfd[1], ".", 1) == -1 && errno != EAGAIN) {
             /* EAGAIN is not considered as error */
             dbg_printf("write(2) on fd %d: %s", kn->kdata.kn_eventfd[1],

@@ -32,15 +32,15 @@ sleeper_thread(void *opaque)
     struct sleeper_info *orig_info = (struct sleeper_info *)opaque;
     struct sleeper_info info = *orig_info;
     struct timespec ts;
-    struct timeval now;
+    unsigned long long now_value;
     pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
     pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
     atomic_inc(&orig_info->status);
 
-    gettimeofday(&now, NULL);
-    ts.tv_sec = now.tv_sec + info.interval / 1000;
-    ts.tv_nsec = now.tv_usec * 1000 + (info.interval % 1000) * 1000000;
+    __stckf(&now_value);
+    ts.tv_sec = (now_value / 4096000000UL) - 2208988800UL;
+    ts.tv_nsec = (now_value % 4096000000UL) * 1000 / 4096;
     /* make sure tv_nsec is no larger than 999999999 */
     ts.tv_sec += ts.tv_nsec / 1000000000;
     ts.tv_nsec = ts.tv_nsec % 1000000000;
@@ -54,14 +54,16 @@ sleeper_thread(void *opaque)
     pthread_cond_timedwait(&cond, &mtx, &ts);
     pthread_mutex_unlock(&mtx);
 
-    info.orig_knote->kdata.expired = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-
-    dbg_printf("wake up from sleep");
-
     /* wake up */
+    if (info.orig_knote->kdata.kn_eventfd[0] == -1) {
+        /* the corresponding end is closed, don't bother writing */
+        return NULL;
+    }
+
     int cnt;
     int write_fd = info.orig_knote->kdata.kn_eventfd[1];
-
+    info.orig_knote->kdata.expired = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    dbg_printf("wake up from sleep");
 write_again:
     cnt = write(write_fd, &info.orig_knote, sizeof(info.orig_knote));
     if (cnt < sizeof(info.orig_knote)) {
