@@ -31,27 +31,27 @@ ME:=$(firstword $(MAKEFILE_LIST))
 
 AR=ar -ruv
 
-CC=/c390/archive/zosdev/latest/xlc
-LINK=/c390/archive/zosdev/latest/xlc -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,LIST,LP64 -W l,XPLINK
-LINKEXE=/c390/archive/zosdev/latest/xlc -qlist -V -W l,CALL,REUS=RENT,MAP,XREF,LIST,LP64 -W l,XPLINK
+CC=/c390/archive/zosdev/latest/xlclang
+LINK=$(CC) -qlist= -V -W l,CALL,REUS=RENT,MAP,XREF,DLL,LIST,LP64 -W l,XPLINK
+LINKEXE=$(CC) -qlist= -V -W l,CALL,REUS=RENT,MAP,XREF,LIST,LP64 -W l,XPLINK
 
 CFLAGS_DLL=-q64 \
--qlist -qsource -qasm \
+-qlist= -qsource -qasm \
 -qnosearch -qxplink -qnocsect \
 -DHAVE_CONFIG_H -I$(SRC_DIR) -I$(SRC_DIR)/src/common -I$(SRC_DIR)/include \
 -D_XOPEN_SOURCE=600 \
 -D_UNIX03_WITHDRAWN \
 -Dinline= \
--g -qdll $(MORE_FLAGS) -qexportall -c -M 
+-g -qdll $(MORE_FLAGS) -qexportall
 
 CFLAGS_EXE=-q64 \
--qlist -qsource -qasm \
+-qlist= -qsource -qasm \
 -qnosearch -qxplink -qnocsect \
 -DHAVE_CONFIG_H -I$(SRC_DIR) -I$(SRC_DIR)/src/common -I$(SRC_DIR)/include \
 -D_XOPEN_SOURCE=600 \
 -D_UNIX03_WITHDRAWN \
 -Dinline= \
--g -qdll $(MORE_FLAGS) -c -M 
+-g -qdll $(MORE_FLAGS)
 
 ASM=as -m GOFF
 
