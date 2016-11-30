@@ -36,7 +36,7 @@ extern char *KQUEUE_DEBUG_IDENT;
 #elif defined(_WIN32)
 # define THREAD_ID (int)(GetCurrentThreadId())
 #elif defined(__MVS__)
-# define THREAD_ID (*(long*)&pthread_self().__[0])
+# define THREAD_ID ({ pthread_t _I = pthread_self(); *(uintptr_t*) &_I; })
 #else 
 # error Unsupported platform
 #endif
@@ -44,7 +44,7 @@ extern char *KQUEUE_DEBUG_IDENT;
 #define KQ_ABORT(fmt, ...)                                                   \
     do {                                                                     \
         fprintf(stderr,                                                      \
-                "libkqueue internal error in thread %lx at [%s()] %s:%zu\n", \
+                "libkqueue internal error in thread %lx at [%s()] %s:%d\n", \
                 THREAD_ID, __func__, __FILE__, __LINE__);                    \
         fprintf(stderr, "Abort Message: " fmt "\n", ##__VA_ARGS__);          \
         abort();                                                             \
