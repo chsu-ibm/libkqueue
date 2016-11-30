@@ -57,23 +57,11 @@ print_file_state(const struct stat *sb)
 static int
 new_kq_id(void)
 {
-    static int MAX_FILE_DESCRIPTORS = -1;
-    static int ID = 0;
-    /* should only call once */
-    if (slowpath(MAX_FILE_DESCRIPTORS < 0)) {
-        struct rlimit rlim;
-        if (getrlimit(RLIMIT_NOFILE, &rlim) == 0) {
-            MAX_FILE_DESCRIPTORS = rlim.rlim_max;
-        } else {
-            dbg_perror("getrlimit(2)");
-            MAX_FILE_DESCRIPTORS = 65536;;
-        }
+    int kq_id = open("/dev/null", O_RDONLY);
+    if (kq_id == -1) {
+        perror("Fail opening /dev/null");
     }
-
-    /* ID is monotonically and atomically increased and the MAX_FILE_DESCRIPTORS
-     * is the maximum number of file descriptors */
-
-    return atomic_inc(&ID) % MAX_FILE_DESCRIPTORS;
+    return kq_id;
 }
 
 const struct kqueue_vtable kqops = {
@@ -138,7 +126,7 @@ zos_get_descriptor_type(struct knote *kn)
             break;
         default:
             print_file_state(&sb);
-            KQ_ABORT("fd %d is neither a regular file nor a socket",
+            KQ_ABORT("fd %lu is neither a regular file nor a socket",
                      kn->kev.ident);
             break;
     }
@@ -148,6 +136,9 @@ int
 posix_kqueue_init(struct kqueue *kq)
 {
     kq->kq_id = new_kq_id();
+    if (kq->kq_id == -1)
+        return -1;
+
     if (filter_register_all(kq) < 0) {
         close(kq->kq_id);
         return (-1);
