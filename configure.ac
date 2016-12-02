@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([libkqueue], [2.0.4])
+AC_INIT([libkqueue], [2.1.0])
 LT_INIT
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_SRCDIR([configure.ac])
@@ -15,6 +15,14 @@ AC_ARG_ENABLE([libkqueue-install],
   [enable_libkqueue_install=yes]
 )
 AM_CONDITIONAL([INSTALL],[test "x$enable_libkqueue_install" != "xno"])
+
+# Add option to provide Bionic Libc (Android) support
+AC_ARG_ENABLE([bionic-libc],
+  [AS_HELP_STRING([--enable-bionic-libc],
+    [Build for Bionic Libc (Android)])],,
+  [enable_bionic_libc=no]
+)
+AM_CONDITIONAL(BIONIC_LIBC, [test "x$enable_bionic_libc" == "xyes"])
 
 AC_CHECK_HEADER([sys/event.h])
 AC_CHECK_DECL([EPOLLRDHUP], [], [], [[#include <sys/epoll.h>]])

@@ -168,6 +168,15 @@ struct kevent {
                                    program */
 #define VQ_NOTRESPLOCK  0x0080  /* server lockd down */
 
+/*
+ * data/hint flags for EVFILT_TIMER as suported and defined in kevent64
+ */
+#define NOTE_SECONDS    0x0001  /* time specified in seconds */
+#define NOTE_USECONDS   0x0002  /* time specified in micro seconds */
+#define NOTE_NSECONDS   0x0004  /* time specified in nano seconds */
+#define NOTE_ABSOLUTE   0x0008  /* data is an absolute timeout */
+
+
 
 #ifndef __KERNEL__
 #ifdef  __cplusplus
@@ -176,10 +185,14 @@ extern "C" {
 
 #ifdef _WIN32
 
+#if (_MSC_VER < 1900)
 struct timespec {
     time_t  tv_sec;
     long    tv_nsec;
 };
+#else
+#include <time.h>
+#endif
 
 __declspec(dllexport) int
 kqueue(void);
