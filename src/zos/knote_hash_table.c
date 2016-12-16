@@ -23,8 +23,8 @@ knote_map_hash(int fd)
 struct free_knote_map_s {
     struct free_knote_map_s *next;
 };
-struct free_knote_map_s *free_map_head;
-struct knote_map_bucket_s *free_bucket_head;
+static struct free_knote_map_s *free_map_head;
+static struct knote_map_bucket_s *free_bucket_head;
 
 static struct knote_map_bucket_s *
 knote_map_bucket_s_allocate()
@@ -47,14 +47,18 @@ knote_map_bucket_s_allocate()
 }
 
 /* this mutex is to lock operations for free_map_head and free_bucket_head */
-pthread_mutex_t free_map_mutex1 = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t *free_map_mutex = &free_map_mutex1;
+static int is_pthread_mutex_initialized = false;
+static pthread_mutex_t free_map_mutex1, *free_map_mutex = &free_map_mutex1;
 #define LOCK(m) pthread_mutex_lock(m)
 #define UNLOCK(m) pthread_mutex_unlock(m)
 
 knote_map_t
 knote_map_init()
 {
+    if (is_pthread_mutex_initialized == false) {
+        pthread_mutex_init(free_map_mutex, NULL);
+        is_pthread_mutex_initialized = true;
+    }
     size_t size = KNOTE_MAP_ENTRIES * sizeof(void *);
     knote_map_t knote_map;
     LOCK(free_map_mutex);
