@@ -4,7 +4,7 @@
 #include <stdlib.h> /* malloc */
 
 #define KNOTE_MAP_ENTRIES 64
-#define KNOTE_MAP_MASK (~(KNOTE_MAP_ENTRIES - 1))
+#define KNOTE_MAP_MASK (KNOTE_MAP_ENTRIES - 1)
 
 struct knote_map_bucket_s {
     int fd;
@@ -47,7 +47,7 @@ knote_map_bucket_s_allocate()
 }
 
 /* this mutex is to lock operations for free_map_head and free_bucket_head */
-static int is_pthread_mutex_initialized = false;
+static int is_pthread_mutex_initialized = 0;
 static pthread_mutex_t free_map_mutex1, *free_map_mutex = &free_map_mutex1;
 #define LOCK(m) pthread_mutex_lock(m)
 #define UNLOCK(m) pthread_mutex_unlock(m)
@@ -55,9 +55,9 @@ static pthread_mutex_t free_map_mutex1, *free_map_mutex = &free_map_mutex1;
 knote_map_t
 knote_map_init()
 {
-    if (is_pthread_mutex_initialized == false) {
+    if (is_pthread_mutex_initialized == 0) {
         pthread_mutex_init(free_map_mutex, NULL);
-        is_pthread_mutex_initialized = true;
+        is_pthread_mutex_initialized = 1;
     }
     size_t size = KNOTE_MAP_ENTRIES * sizeof(void *);
     knote_map_t knote_map;
