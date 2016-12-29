@@ -230,5 +230,7 @@ int  posix_evfilt_user_knote_enable(struct filter *, struct knote *);
 int  posix_evfilt_user_knote_disable(struct filter *, struct knote *);
 
 */
-
+#define D(fmt, args...)                                                \
+    fprintf(stderr, "@KQ@ %s:%d [%s()] " fmt "\n", __FILE__, __LINE__, \
+            __func__, ##args)
 #endif  /* ! _KQUEUE_PRIVATE_H */

@@ -50,6 +50,9 @@ extern char *KQUEUE_DEBUG_IDENT;
         abort();                                                             \
     } while (0)
 
+#define KQ_ABORT_IF(cond, args...) \
+    if (cond) KQ_ABORT(args)
+
 #ifndef NDEBUG
 #ifdef __MVS__
 #define dbg_printf(fmt, ...)                                           \
