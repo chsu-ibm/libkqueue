@@ -32,19 +32,19 @@
 #include "private.h"
 
 /* close pipefd if exist and reset pipefd to -1 */
-static void
+static inline void
 reset_pipe(struct filter *filt, int *pipefd)
 {
-    int read_fd = pipefd[0];
     int write_fd = pipefd[1];
+    atomic_store32(&pipefd[1], -1);
+    int read_fd = pipefd[0];
+    atomic_store32(&pipefd[0], -1);
     if (read_fd != -1) {
         knote_map_remove(filt->knote_map, read_fd);
         posix_kqueue_clearfd_read(filt->kf_kqueue, read_fd);
         close(read_fd);
     }
     if (write_fd != -1) close(write_fd);
-
-    pipefd[0] = pipefd[1] = -1;
 }
 
 int
@@ -136,13 +136,14 @@ posix_evfilt_user_knote_modify(struct filter *filt, struct knote *kn,
     if ((!(kn->kev.flags & EV_DISABLE)) && kev->fflags & NOTE_TRIGGER) {
         dbg_printf("trigger user event: knote = 0x%p", kn);
         kn->kev.fflags |= NOTE_TRIGGER;
-        if (kn->kdata.kn_eventfd[0] == -1)
-            return 0;
-        if (write(kn->kdata.kn_eventfd[1], ".", 1) == -1 && errno != EAGAIN) {
-            /* EAGAIN is not considered as error */
-            dbg_printf("write(2) on fd %d: %s", kn->kdata.kn_eventfd[1],
-                       strerror(errno));
-            return -1;
+        while (kn->kdata.kn_eventfd[1] != -1 &&
+               write(kn->kdata.kn_eventfd[1], ".", 1) == -1) {
+            int err = errno;
+            if (!(err == EAGAIN || err == EWOULDBLOCK || err == EINTR)) {
+                dbg_printf("write(2) on fd %d: %s", kn->kdata.kn_eventfd[1],
+                           strerror(errno));
+                return -1;
+            }
         }
     }
     return 0;

@@ -203,11 +203,11 @@ __inline int atomic_dec(int * p) {
 #define EVENTFD_PLATFORM_SPECIFIC \
     int ef_wfd; int ef_sig
 
-/* kn_eventfd is used as pipefd[2] and expired is for timer */
+/* kn_eventfd is used as pipefd[2] and opaque is for timer */
 #define KNOTE_PLATFORM_SPECIFIC \
     struct {                    \
         int kn_eventfd[2];      \
-        uintptr_t expired; \
+        void *opaque; \
     } kdata
 
 /* forward declaration */
@@ -277,4 +277,20 @@ posix_kqueue_clearfd_write(struct kqueue *kq, int fd)
 }
 
 #include "knote_hash_table.h"
+
+static inline void atomic_store32(int *p, int v)
+{
+    int n = *p;
+    for (; n != __zsync_val_compare_and_swap32(p, n, v); n = *p)
+        ;
+}
+
+static inline void atomic_store_ptr(void **p1, void *v1)
+{
+    uintptr_t *p = (uintptr_t *)p1;
+    uintptr_t v = (uintptr_t)v1;
+    uintptr_t n = *p;
+    for (; n != __zsync_val_compare_and_swap64((long long *)p, n, v); n = *p)
+        ;
+}
 #endif /* ! _KQUEUE_POSIX_PLATFORM_H */
