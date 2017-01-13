@@ -22,9 +22,11 @@ SRC_DIR=..
 endif
 
 ifdef DEBUG
-MORE_FLAGS=-DDEBUG=1 -UNDEBUG
+MORE_FLAGS=-DDEBUG=1 -UNDEBUG -g
+DBGLD=dbgld
 else
-MORE_FLAGS=-DNDEBUG
+MORE_FLAGS=-DNDEBUG -O2
+DBGLD=true
 endif
 
 ME:=$(firstword $(MAKEFILE_LIST))
@@ -42,7 +44,7 @@ CFLAGS_DLL=-q64 \
 -D_XOPEN_SOURCE=600 \
 -D_UNIX03_WITHDRAWN \
 -Dinline= \
--g -qdll $(MORE_FLAGS) -qexportall
+-qdll $(MORE_FLAGS) -qexportall
 
 CFLAGS_EXE=-q64 \
 -qlist= -qsource -qasm \
@@ -123,13 +125,13 @@ celqdopt.o: $(ME)
 	$(ASM) $<
 
 libkqueue.dll libkqueue.x libkqueue.a: $(DLLOBJS) $(CSRC_DLL) $(ME)
-	$(LINK) -o libkqueue.dll $(DLLOBJS) > libkqueue.map && dbgld libkqueue.dll
+	$(LINK) -o libkqueue.dll $(DLLOBJS) > libkqueue.map && $(DBGLD) libkqueue.dll
 	$(AR) libkqueue.a $(DLLOBJS) >> libkqueue.map
-	dbgld $@
+	$(DBGLD) $@
 
 kqtest: $(TESTOBJS) libkqueue.x libkqueue.dll $(ASMOBJS) $(ME)
 	$(LINKEXE) -o kqtest $(TESTOBJS) $(ASMOBJS) libkqueue.x > kqtest.map
-	dbgld -c ./kqtest
+	$(DBGLD) -c ./kqtest
 
 runtest: kqtest libkqueue.dll libkqueue.x $(ME)
 	LIBPATH=$(LIBPATH):. ./kqtest
