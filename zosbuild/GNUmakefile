@@ -116,7 +116,7 @@ celqdopt.o: $(ME)
 	@echo "$(LE_OPTIONS)" | /bin/sed -e "s'^ *_''"  |  /bin/awk '{printf "%-80s\n",$$0}' >  $(patsubst %.o,%.asm,$@)
 	$(ASM) -a $(patsubst %.o,%.asm,$@) > $(patsubst %.o,%.lst,$@)
 
-%.o: %.c ../config.h $(ME)
+%.o: %.c $(SRC_DIR)/config.h $(ME)
 	echo "compiling in " $(PWD)
 	$(CC) -c $(CFLAGS) $< >$(notdir $(patsubst %.c,%.lst,$<))
 
