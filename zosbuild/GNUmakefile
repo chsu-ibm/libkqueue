@@ -11,7 +11,7 @@ install: all
 	@bash -c "[[ -w $(INSTALL_LOCATION) ]] || (echo INSTALL_LOCATION $(INSTALL_LOCATION)  not writ-able ; false)"
 	mkdir -p $(INSTALL_LOCATION)/include/
 	mkdir -p $(INSTALL_LOCATION)/lib
-	cp -r ../include/*   $(INSTALL_LOCATION)/include/
+	cp -r $(SRC_DIR)/include/*   $(INSTALL_LOCATION)/include/
 	cp libkqueue.x $(INSTALL_LOCATION)/lib
 	cp libkqueue.dll $(INSTALL_LOCATION)/lib
 	cp libkqueue.a $(INSTALL_LOCATION)/lib
@@ -19,6 +19,10 @@ install: all
 
 ifndef SRC_DIR
 SRC_DIR=..
+endif
+
+ifndef BUILD_DIR
+BUILD_DIR=${PWD}
 endif
 
 ifdef DEBUG
@@ -116,7 +120,7 @@ celqdopt.o: $(ME)
 	@echo "$(LE_OPTIONS)" | /bin/sed -e "s'^ *_''"  |  /bin/awk '{printf "%-80s\n",$$0}' >  $(patsubst %.o,%.asm,$@)
 	$(ASM) -a $(patsubst %.o,%.asm,$@) > $(patsubst %.o,%.lst,$@)
 
-%.o: %.c $(SRC_DIR)/config.h $(ME)
+%.o: %.c $(BUILD_DIR)/config.h $(ME)
 	echo "compiling in " $(PWD)
 	$(CC) -c $(CFLAGS) $< >$(notdir $(patsubst %.c,%.lst,$<))
 
@@ -144,5 +148,5 @@ clean:
 	-rm kqtest kqtest.map kqtest.mdbg  libkqueue.dll libkqueue.map libkqueue.x  2>/dev/null
 	-rm CEEDUMP.* 2>/dev/null
 
-$(SRC_DIR)/config.h: $(SRC_DIR)/zosbuild/zosconfig.h
-	cp $(SRC_DIR)/zosbuild/zosconfig.h $(SRC_DIR)/config.h
+$(BUILD_DIR)/config.h: $(SRC_DIR)/zosbuild/zosconfig.h
+	cp $(SRC_DIR)/zosbuild/zosconfig.h $(BUILD_DIR)/config.h
