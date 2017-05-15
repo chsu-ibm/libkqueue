@@ -58,7 +58,7 @@ extern char *KQUEUE_DEBUG_IDENT;
 #define dbg_printf(fmt, ...)                                           \
     do {                                                               \
         if (DEBUG_KQUEUE)                                              \
-            fprintf(stderr, "%s [%lx]: [%s()] %s:%zu: " fmt "\n",      \
+            fprintf(stderr, "%s [%lx]: [%s()] %s:%u: " fmt "\n",      \
                     KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, __FILE__, \
                     __LINE__, ##__VA_ARGS__);                          \
     } while (0)
@@ -68,7 +68,7 @@ extern char *KQUEUE_DEBUG_IDENT;
 #define dbg_perror(str)                                                     \
     do {                                                                    \
         if (DEBUG_KQUEUE)                                                   \
-            fprintf(stderr, "%s [%lx]: [%s()] %s:%zu: %s: %s (errno=%d)\n", \
+            fprintf(stderr, "%s [%lx]: [%s()] %s:%u: %s: %s (errno=%d)\n", \
                     KQUEUE_DEBUG_IDENT, THREAD_ID, __func__, __FILE__,      \
                     __LINE__, str, strerror(errno), errno);                 \
     } while (0)

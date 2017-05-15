@@ -87,7 +87,7 @@ evfilt_read_copyout(struct kevent *dst, struct knote *src, void *ptr)
 int
 evfilt_read_knote_create(struct filter *filt, struct knote *kn)
 {
-    dbg_printf("filt = %p, kn = %p, fd = %d", filt, kn, kn->kev.ident);
+    dbg_printf("filt = %p, kn = %p, fd = %lu", filt, kn, kn->kev.ident);
 
     if (zos_get_descriptor_type(kn) < 0)
         return (-1);

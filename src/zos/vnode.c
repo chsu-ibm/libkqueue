@@ -93,7 +93,7 @@ vnode_wait_thread(void *arg)
         /* Scan the wait queue to see if anyone is interested */
         pthread_rwlock_wrlock(&filt->kf_knote_mtx);
         kn = knote_lookup(filt, mtype);
-        dbg_printf("filt=0x%x, kn=0x%x", filt, kn);
+        dbg_printf("filt=0x%p, kn=0x%p", filt, kn);
 
         if (kn != NULL) {
             dbg_puts("raising event level");
