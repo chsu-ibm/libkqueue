@@ -17,6 +17,7 @@
 #include <pthread.h>
 #include "../common/queue.h"
 #include "private.h"
+#include <time.h>
 
 struct sleeper_info {
     /* @status: 0: not done; 1: good; -1: bad */
@@ -41,8 +42,7 @@ sleeper_thread(void *opaque)
     struct timespec ts;
     time_t sec;
     time_t nsec;
-    long delay;
-    unsigned long long now_value;
+    long deadline;
     struct mutex_t mutex;
 
     pthread_mutex_init(&mutex.mtx, NULL);
@@ -51,35 +51,30 @@ sleeper_thread(void *opaque)
     kn->kdata.opaque = &mutex;
     atomic_inc(&orig_info->status);
 
-    delay = kn->kev.data;
+    // kev.data is already the absolute time of deadline
+    deadline = kn->kev.data;
     switch (kn->kev.fflags & NOTE_TIMER_MASK) {
         case NOTE_USECONDS:
-            sec = delay / 1000000;
-            nsec = (delay % 1000000);
+            sec = deadline / 1000000;
+            nsec = (deadline % 1000000);
             break;
         case NOTE_NSECONDS:
-            sec = delay / 1000000000;
-            nsec = (delay % 1000000000);
+            sec = deadline / 1000000000;
+            nsec = (deadline % 1000000000);
             break;
         case NOTE_SECONDS:
-            sec = delay;
+            sec = deadline;
             nsec = 0;
             break;
         default: /* milliseconds */
-            sec = delay / 1000;
-            nsec = (delay % 1000) * 1000000;
+            sec = deadline / 1000;
+            nsec = (deadline % 1000) * 1000000;
     }
 
-    __stckf(&now_value);
-    ts.tv_sec = sec + (now_value / 4096000000UL) - 2208988800UL;
-    ts.tv_nsec = nsec + (now_value % 4096000000UL) * 1000 / 4096;
-    /* make sure tv_nsec is no larger than 999999999 */
-    ts.tv_sec += ts.tv_nsec / 1000000000;
-    ts.tv_nsec = ts.tv_nsec % 1000000000;
+    ts.tv_sec = sec;
+    ts.tv_nsec = nsec;
 
-    dbg_printf("about to goto sleep, will wakeup %ld.%lu later", sec, nsec);
-
-    /* go sleep */
+    /* use pthread_cond_timedwait as nanosleep */
     pthread_mutex_lock(&mutex.mtx);
     /* FIXME: handle error */
     pthread_cond_timedwait(&mutex.cond, &mutex.mtx, &ts);
