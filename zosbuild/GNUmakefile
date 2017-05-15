@@ -120,7 +120,7 @@ celqdopt.o: $(ME)
 	@echo "$(LE_OPTIONS)" | /bin/sed -e "s'^ *_''"  |  /bin/awk '{printf "%-80s\n",$$0}' >  $(patsubst %.o,%.asm,$@)
 	$(ASM) -a $(patsubst %.o,%.asm,$@) > $(patsubst %.o,%.lst,$@)
 
-%.o: %.c $(BUILD_DIR)/config.h $(ME)
+%.o: %.c $(SRC_DIR)/config.h $(ME)
 	echo "compiling in " $(PWD)
 	$(CC) -c $(CFLAGS) $< >$(notdir $(patsubst %.c,%.lst,$<))
 
@@ -147,5 +147,5 @@ clean:
 	-rm kqtest kqtest.map kqtest.mdbg  libkqueue.dll libkqueue.map libkqueue.x  2>/dev/null
 	-rm CEEDUMP.* 2>/dev/null
 
-$(BUILD_DIR)/config.h: $(SRC_DIR)/zosbuild/zosconfig.h
-	cp $(SRC_DIR)/zosbuild/zosconfig.h $(BUILD_DIR)/config.h
+$(SRC_DIR)/config.h: $(SRC_DIR)/zosbuild/zosconfig.h
+	cp $(SRC_DIR)/zosbuild/zosconfig.h $(SRC_DIR)/config.h
