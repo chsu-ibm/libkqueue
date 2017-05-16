@@ -128,8 +128,12 @@ celqdopt.o: $(ME)
 	echo "assembling in " $(PWD)
 	$(ASM) $<
 
-libkqueue.dll libkqueue.x libkqueue.a: $(DLLOBJS) $(CSRC_DLL) $(ME)
+libkqueue.x: libkqueue.dll
+
+libkqueue.dll: $(DLLOBJS) $(CSRC_DLL) $(ME)
 	$(LINK) -o libkqueue.dll $(DLLOBJS) > libkqueue.map && $(DBGLD) libkqueue.dll
+
+libkqueue.a: $(DLLOBJS) $(ME)
 	$(AR) libkqueue.a $(DLLOBJS) >> libkqueue.map
 
 kqtest: $(TESTOBJS) libkqueue.x libkqueue.dll $(ASMOBJS) $(ME)
