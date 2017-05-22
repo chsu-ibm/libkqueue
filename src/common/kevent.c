@@ -265,6 +265,7 @@ kevent_copyin(struct kqueue *kq, const struct kevent *src, int nchanges,
 err_path:
         if (nevents > 0) {
             memcpy(eventlist, src, sizeof(*src));
+            eventlist->flags |= EV_ERROR;
             eventlist->data = status;
             nevents--;
             eventlist++;
@@ -284,6 +285,7 @@ kevent(int kqfd, const struct kevent *changelist, int nchanges,
 {
     struct kqueue *kq;
     int rv = 0;
+    int n1;
 #ifndef NDEBUG
     static unsigned int _kevent_counter = 0;
     unsigned int myid = 0;
@@ -321,13 +323,10 @@ kevent(int kqfd, const struct kevent *changelist, int nchanges,
         if (rv < 0)
             goto out;
         if (rv > 0) {
-            eventlist += rv;
             nevents -= rv;
         }
     }
 
-    rv = 0;
-    
     /*
      * Wait for events and copy them to the eventlist
      */
@@ -336,13 +335,13 @@ kevent(int kqfd, const struct kevent *changelist, int nchanges,
 
     dbg_printf2("nevents = %d", nevents);
     if (nevents > 0) {
-        rv = kqops.kevent_wait(kq, nevents, timeout);
+        n1 = kqops.kevent_wait(kq, nevents, timeout);
         dbg_printf("kqops.kevent_wait returned %d", rv);
-        if (fastpath(rv > 0)) {
+        if (fastpath(n1 > 0)) {
             kqueue_lock(kq);
-            rv = kqops.kevent_copyout(kq, rv, eventlist, nevents);
+            rv += kqops.kevent_copyout(kq, n1, &eventlist[rv], nevents);
             kqueue_unlock(kq);
-        } else if (rv == 0) {
+        } else if (n1 == 0) {
             /* Timeout reached */
         } else {
             dbg_printf("(%u) kevent_wait failed", myid);
